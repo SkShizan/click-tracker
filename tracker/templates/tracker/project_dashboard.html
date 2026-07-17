@@ -1,281 +1,219 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>{{ project.name }} - Dashboard</title>
-    <style>
-        /* --- Premium Color Theme Applied --- */
-        body { 
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
-            margin: 40px auto; 
-            max-width: 1000px; 
-            background-color: #EADFDB; /* Soft Beige */
-            color: #333; 
-        }
-        
-        /* Navigation */
-        .back-link { 
-            display: inline-block; 
-            margin-bottom: 25px; 
-            text-decoration: none; 
-            color: #333; 
-            font-weight: 600; 
-            background-color: #D8C2B5; /* Warm Taupe */
-            padding: 10px 20px;
-            border-radius: 8px;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .back-link:hover { 
-            background-color: #C0C4B6; /* Olive/Grey Green */
-            transform: translateY(-1px);
-        }
+{% extends "base.html" %}
 
-        /* Project Header Card */
-        .project-header {
-            background: #FFFFFF;
-            border: 1px solid #D8C2B5;
-            padding: 30px;
-            border-radius: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 35px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-        }
-        .project-header h1 { margin: 0 0 8px 0; color: #222; font-size: 28px; }
-        .project-header p { margin: 0; color: #555; font-size: 16px; line-height: 1.5; }
-        
-        .stat-badge {
-            background: #C0C4B6; /* Olive/Grey Green */
-            color: #222;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 22px;
-            font-weight: 700;
-            text-align: center;
-            box-shadow: inset 0 2px 4px rgba(255,255,255,0.3);
-        }
-        .stat-badge span { 
-            display: block; 
-            font-size: 12px; 
-            font-weight: 700; 
-            text-transform: uppercase; 
-            letter-spacing: 0.5px; 
-            color: #333; 
-            margin-bottom: 4px; 
-        }
+{% block title %}{{ project.name }} — ClickTrack{% endblock %}
 
-        /* Form Container */
-        .form-container { 
-            background: #FFFFFF; 
-            padding: 30px; 
-            border-radius: 12px; 
-            margin-bottom: 40px; 
-            border: 1px solid #D8C2B5; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-        }
-        .form-container h3 { margin-top: 0; color: #222; font-size: 22px; margin-bottom: 20px; }
-        
-        input[type="text"] { 
-            padding: 12px 15px; 
-            width: 100%; 
-            max-width: 450px; 
-            border: 1px solid #AEAFB1; /* Cool Grey */
-            border-radius: 6px; 
-            margin-bottom: 15px; 
-            font-size: 15px;
-            background-color: #FAFAFA;
-            transition: all 0.2s ease;
-            box-sizing: border-box;
-        }
-        input[type="text"]:focus {
-            outline: none;
-            border-color: #C0C4B6;
-            box-shadow: 0 0 0 3px rgba(192, 196, 182, 0.3);
-            background-color: #FFFFFF;
-        }
-        
-        .btn-submit { 
-            padding: 12px 24px; 
-            background: #C0C4B6; 
-            color: #222; 
-            border: none; 
-            border-radius: 6px; 
-            cursor: pointer; 
-            font-weight: 700;
-            font-size: 15px;
-            transition: all 0.2s ease;
-        }
-        .btn-submit:hover { 
-            background: #AEAFB1; 
-            color: #FFFFFF;
-        }
+{% block breadcrumb %}
+<nav class="breadcrumb">
+    <a href="{% url 'dashboard' %}">Dashboard</a>
+    <span class="sep">/</span>
+    <span class="current">{{ project.name }}</span>
+</nav>
+{% endblock %}
 
-        /* Button Cards */
-        h2.section-title { color: #222; font-size: 24px; margin-bottom: 20px; }
-        
-        .card { 
-            background: #FFFFFF; 
-            border: 1px solid #D8C2B5; 
-            padding: 30px; 
-            margin-bottom: 25px; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-            transition: border-color 0.2s ease;
-        }
-        .card:hover { border-color: #C0C4B6; }
-        
-        .card-header { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            margin-bottom: 20px; 
-        }
-        .card-header h3 { margin: 0; color: #222; font-size: 20px; }
-        .id-badge { 
-            font-size: 13px; 
-            font-weight: normal; 
-            color: #555; 
-            background: #EADFDB; 
-            padding: 4px 8px; 
-            border-radius: 4px; 
-            font-family: monospace; 
-            margin-left: 10px; 
-        }
-        
-        .btn-view { 
-            background: #D8C2B5; 
-            color: #222; 
-            text-decoration: none; 
-            padding: 10px 20px; 
-            border-radius: 6px; 
-            font-weight: 600;
-            font-size: 14px;
-            transition: all 0.2s ease;
-        }
-        .btn-view:hover { 
-            background: #C0C4B6; 
-        }
+{% block sidebar_extra %}
+<div class="nav-label">Current Project</div>
+<a href="{% url 'project_dashboard' project.id %}" class="nav-link active">
+    <i class="fa-solid fa-folder-open"></i> {{ project.name|truncatechars:20 }}
+</a>
+{% endblock %}
 
-        /* Code Snippet Box */
-        .code-box { 
-            background: #FAFAFA; 
-            padding: 20px; 
-            border-radius: 8px;
-            border: 1px solid #AEAFB1;
-        }
-        .code-box p { margin-top: 0; font-size: 14px; font-weight: 700; color: #222; margin-bottom: 10px; }
-        textarea { 
-            width: 100%; 
-            height: 280px; 
-            font-family: 'Courier New', Courier, monospace; 
-            font-size: 13.5px; 
-            padding: 15px; 
-            border-radius: 6px; 
-            border: 1px solid #D8C2B5;
-            background-color: #FFFFFF;
-            color: #333;
-            resize: vertical; 
-            box-sizing: border-box; 
-            line-height: 1.4;
-        }
-        textarea:focus { outline: none; border-color: #C0C4B6; }
+{% block topbar_actions %}
+<button class="btn btn-primary" onclick="document.getElementById('createBtnModal').classList.add('open')">
+    <i class="fa-solid fa-plus"></i> New Tracker
+</button>
+{% endblock %}
 
-        .empty-state {
-            background: #FFFFFF;
-            padding: 40px;
-            text-align: center;
-            border-radius: 12px;
-            border: 1px dashed #AEAFB1;
-            color: #666;
-            font-size: 16px;
-        }
-    </style>
-</head>
-<body>
-    <a href="{% url 'dashboard' %}" class="back-link">← Back to Global Dashboard</a>
-    
-    <div class="project-header">
-        <div>
-            <h1>Project: {{ project.name }}</h1>
-            <p>{{ project.description|default:"No description provided." }}</p>
+{% block content %}
+
+<!-- Project header -->
+<div class="card" style="margin-bottom:24px;">
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:20px;">
+        <div style="display:flex; align-items:flex-start; gap:16px;">
+            <div style="
+                width:52px; height:52px; border-radius:12px;
+                background:var(--accent-light); color:var(--accent);
+                display:flex; align-items:center; justify-content:center;
+                font-size:22px; flex-shrink:0;
+            "><i class="fa-solid fa-folder-open"></i></div>
+            <div>
+                <h1 style="font-size:22px; font-weight:800; color:var(--text); margin-bottom:4px;">{{ project.name }}</h1>
+                <p style="color:var(--text-muted); font-size:13.5px;">{{ project.description|default:"No description provided." }}</p>
+                <p style="color:var(--text-dim); font-size:12px; margin-top:6px;">
+                    <i class="fa-solid fa-calendar" style="margin-right:4px;"></i>
+                    Created {{ project.created_at|date:"M d, Y" }}
+                </p>
+            </div>
         </div>
-        <div>
-            <div class="stat-badge">
-                <span>Total Clicks</span>
-                {{ total_clicks }}
+        <div style="display:flex; gap:8px; flex-shrink:0;">
+            <button class="btn btn-danger btn-sm"
+                onclick="confirmDelete('{% url 'delete_project' project.id %}', '{{ project.name|escapejs }}', 'project')">
+                <i class="fa-solid fa-trash"></i> Delete Project
+            </button>
+        </div>
+    </div>
+    <hr class="divider">
+    <div class="stats-grid" style="margin-bottom:0;">
+        <div class="stat-card">
+            <div class="stat-icon indigo"><i class="fa-solid fa-toggle-on"></i></div>
+            <div>
+                <div class="stat-value">{{ buttons|length }}</div>
+                <div class="stat-label">Trackers</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon yellow"><i class="fa-solid fa-cursor"></i></div>
+            <div>
+                <div class="stat-value">{{ total_clicks }}</div>
+                <div class="stat-label">Total Clicks</div>
             </div>
         </div>
     </div>
+</div>
 
-    <div class="form-container">
-        <h3>Create New Trackable Button</h3>
-        <form method="POST">
-            {% csrf_token %}
-            <input type="text" name="title" placeholder="Button Name (e.g., 'Checkout Button')" required><br>
-            <input type="text" name="description" placeholder="Short description or location note"><br>
-            <button type="submit" class="btn-submit">Create Button</button>
-        </form>
+<!-- Buttons list -->
+<div class="card">
+    <div class="card-header">
+        <div>
+            <div class="card-title">Button Trackers</div>
+            <div class="card-subtitle">{{ buttons|length }} tracker{{ buttons|length|pluralize }} in this project</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('createBtnModal').classList.add('open')">
+            <i class="fa-solid fa-plus"></i> Add Tracker
+        </button>
     </div>
 
-    <h2 class="section-title">Buttons in this Project</h2>
-    {% for button in buttons %}
-        <div class="card">
-            <div class="card-header">
-                <h3>{{ button.title }} <span class="id-badge">ID: {{ button.id }}</span></h3>
-                <a href="{% url 'button_analytics' button.id %}" class="btn-view">View Click Data →</a>
+    {% if buttons %}
+    <div style="display:flex; flex-direction:column; gap:16px;">
+        {% for button in buttons %}
+        <div style="
+            background:var(--surface2); border:1px solid var(--border);
+            border-radius:10px; padding:20px; transition:border-color 0.2s;
+        " onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                <div>
+                    <div style="font-weight:700; font-size:15px; color:var(--text); margin-bottom:4px;">
+                        {{ button.title }}
+                    </div>
+                    {% if button.description %}
+                    <div style="color:var(--text-muted); font-size:13px;">{{ button.description }}</div>
+                    {% endif %}
+                </div>
+                <div style="display:flex; gap:8px; align-items:center; flex-shrink:0;">
+                    <span class="badge badge-green">
+                        <i class="fa-solid fa-cursor" style="margin-right:4px;"></i>
+                        {{ button.click_count }} click{{ button.click_count|pluralize }}
+                    </span>
+                    <a href="{% url 'button_analytics' button.id %}" class="btn btn-ghost btn-sm">
+                        <i class="fa-solid fa-chart-bar"></i> Analytics
+                    </a>
+                    <button class="btn btn-danger btn-sm btn-icon" title="Delete tracker"
+                        onclick="confirmDelete('{% url 'delete_button' button.id %}', '{{ button.title|escapejs }}', 'tracker')">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
             </div>
-            
-            <div class="code-box">
-                <p>Dynamic Integration Code:</p>
-                <!-- onclick="this.select()" lets the user click once to highlight the whole code block -->
-                <textarea readonly onclick="this.select()"><!-- 1. Add this attribute to your HTML button -->
+
+            <!-- Integration Code -->
+            <div style="margin-bottom:8px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                    <span style="font-size:12px; font-weight:600; color:var(--text-muted);">
+                        <i class="fa-solid fa-code" style="margin-right:5px;"></i>Integration Code
+                    </span>
+                    <button class="btn btn-ghost btn-sm" onclick="copyCode(this)" title="Copy to clipboard">
+                        <i class="fa-solid fa-copy"></i> Copy
+                    </button>
+                </div>
+                <div class="code-wrap">
+                    <textarea class="code-area" readonly onclick="this.select()"><!-- 1. Add this attribute to your HTML button -->
 <button class="track-event" data-tracker-id="{{ button.id }}">Click Me</button>
 
 <!-- 2. Place this script right before your closing </body> tag -->
-<!-- 2. Place this script right before your closing </body> tag -->
-<!-- 2. Place this script right before your closing </body> tag -->
 <script>
   document.querySelectorAll('.track-event').forEach(btn => {
-      btn.addEventListener('click', async function() {
-          const trackerId = this.getAttribute('data-tracker-id');
-          const trackingEndpoint = `{{ request.scheme }}://{{ request.get_host }}/api/track/${trackerId}/`;
+    btn.addEventListener('click', async function() {
+      const trackerId = this.getAttribute('data-tracker-id');
+      const endpoint = `{{ request.scheme }}://{{ request.get_host }}/api/track/${trackerId}/`;
+      const pageUrl = window.location.href;
+      const referrer = document.referrer || 'Direct';
 
-          const currentUrl = window.location.href;
-          const trafficSource = document.referrer || "Direct";
-          const combinedData = currentUrl + " (Came from: " + trafficSource + ")";
+      let ip = '', city = '', country = '';
+      try {
+        const geo = await fetch('https://ip-api.com/json/').then(r => r.json());
+        ip = geo.query; city = geo.city; country = geo.country;
+      } catch(e) {}
 
-          // 3. Outsmart localhost by fetching the real IP & Location from the browser
-          let realIp = "", realCity = "", realCountry = "";
-          try {
-              const geoRes = await fetch('http://ip-api.com/json/');
-              const geoData = await geoRes.json();
-              realIp = geoData.query;
-              realCity = geoData.city;
-              realCountry = geoData.country;
-          } catch (e) { console.warn("Geo lookup failed"); }
-
-          fetch(trackingEndpoint, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 
-                  url: combinedData,
-                  ip: realIp,
-                  city: realCity,
-                  country: realCountry
-              })
-          }).catch(err => console.error('Tracking error:', err));
-      });
+      fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: pageUrl + ' (from: ' + referrer + ')', ip, city, country })
+      }).catch(console.error);
+    });
   });
-</script>
-</textarea>
+<\/script></textarea>
+                </div>
+                <p style="font-size:11px; color:var(--text-dim); margin-top:6px;">
+                    <i class="fa-solid fa-circle-info" style="margin-right:4px;"></i>
+                    Click to select all, then copy and paste into your external website.
+                </p>
             </div>
         </div>
-    {% empty %}
-        <div class="empty-state">
-            <p style="margin: 0;">No buttons created in this project yet.</p>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon"><i class="fa-solid fa-toggle-on"></i></div>
+        <div class="empty-title">No trackers yet</div>
+        <div class="empty-desc">Add a button tracker to get the embed code and start recording clicks.</div>
+        <button class="btn btn-primary" style="margin-top:20px;"
+            onclick="document.getElementById('createBtnModal').classList.add('open')">
+            <i class="fa-solid fa-plus"></i> Add First Tracker
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Create Button Modal -->
+<div class="modal-backdrop" id="createBtnModal">
+    <div class="modal" style="max-width:480px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+            <div class="modal-title" style="margin-bottom:0;">
+                <i class="fa-solid fa-plus-circle" style="color:var(--accent);margin-right:8px;"></i>Add Button Tracker
+            </div>
+            <button class="btn btn-ghost btn-icon btn-sm" onclick="document.getElementById('createBtnModal').classList.remove('open')">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
         </div>
-    {% endfor %}
-</body>
-</html>
+        <form method="POST">
+            {% csrf_token %}
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block; font-size:13px; font-weight:600; color:var(--text-muted); margin-bottom:6px;">
+                    Tracker Name <span style="color:var(--red);">*</span>
+                </label>
+                <input type="text" name="title" placeholder="e.g. Hero CTA Button" required autofocus>
+            </div>
+            <div class="form-group" style="margin-bottom:24px;">
+                <label style="display:block; font-size:13px; font-weight:600; color:var(--text-muted); margin-bottom:6px;">
+                    Note <span style="color:var(--text-dim);">(optional)</span>
+                </label>
+                <input type="text" name="description" placeholder="e.g. Above the fold on homepage">
+            </div>
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button type="button" class="btn btn-ghost"
+                    onclick="document.getElementById('createBtnModal').classList.remove('open')">Cancel</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-plus"></i> Create Tracker
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.getElementById('createBtnModal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+});
+</script>
+{% endblock %}

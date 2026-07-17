@@ -2,39 +2,127 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Login - Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In — ClickTrack</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f8f9fa; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: #333; }
-        .auth-container { background: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 350px; border: 1px solid #e9ecef; }
-        h2 { margin-top: 0; text-align: center; margin-bottom: 25px; }
-        .form-group p { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
-        input[type="text"], input[type="password"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        ul.errorlist { color: #dc3545; list-style-type: none; padding: 0; font-size: 13px; text-align: center; }
-        button { width: 100%; padding: 12px; background: #198754; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 16px; margin-top: 10px; }
-        button:hover { background: #157347; }
-        .bottom-link { display: block; text-align: center; margin-top: 20px; font-size: 14px; color: #0d6efd; text-decoration: none; }
-        .bottom-link:hover { text-decoration: underline; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: #0f1117; --surface: #1a1d27; --surface2: #222536;
+            --border: #2e3347; --accent: #6366f1; --accent-hover: #5254cc;
+            --text: #e2e8f0; --text-muted: #7c85a2; --text-dim: #4a5268;
+            --red: #ef4444; --radius: 12px; --radius-sm: 8px;
+        }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg); color: var(--text);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        .auth-wrap {
+            width: 100%; max-width: 420px;
+        }
+        .brand {
+            display: flex; align-items: center; gap: 10px;
+            justify-content: center; margin-bottom: 32px;
+        }
+        .brand-icon {
+            width: 40px; height: 40px; background: var(--accent);
+            border-radius: 12px; display: flex; align-items: center;
+            justify-content: center; color: #fff; font-size: 18px;
+        }
+        .brand-name { font-size: 22px; font-weight: 800; color: var(--text); }
+        .auth-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 36px;
+        }
+        .auth-card h1 {
+            font-size: 22px; font-weight: 700; margin-bottom: 6px;
+        }
+        .auth-card .subtitle {
+            color: var(--text-muted); font-size: 14px; margin-bottom: 28px;
+        }
+        .form-group { margin-bottom: 18px; }
+        .form-group label {
+            display: block; font-size: 13px; font-weight: 600;
+            color: var(--text-muted); margin-bottom: 6px;
+        }
+        input[type="text"], input[type="password"] {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: var(--radius-sm); padding: 11px 14px;
+            color: var(--text); font-size: 14px;
+            font-family: 'Inter', sans-serif; width: 100%;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+        input::placeholder { color: var(--text-dim); }
+        .error-msg {
+            background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
+            color: #fca5a5; padding: 12px 16px; border-radius: var(--radius-sm);
+            font-size: 13px; margin-bottom: 20px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .btn-submit {
+            width: 100%; padding: 12px;
+            background: var(--accent); color: #fff;
+            border: none; border-radius: var(--radius-sm);
+            font-size: 14px; font-weight: 700;
+            cursor: pointer; font-family: 'Inter', sans-serif;
+            transition: background 0.15s;
+            margin-top: 8px;
+        }
+        .btn-submit:hover { background: var(--accent-hover); }
+        .auth-footer {
+            text-align: center; margin-top: 20px;
+            font-size: 13px; color: var(--text-muted);
+        }
+        .auth-footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
+        .auth-footer a:hover { text-decoration: underline; }
+        /* Hide Django's default labels that we render manually */
+        .django-form label { display: none; }
+        .django-form p { margin-bottom: 18px; }
+        .django-form p input { display: block; width: 100%; margin-top: 0; }
     </style>
 </head>
 <body>
-    <div class="auth-container">
-        <h2>Welcome Back</h2>
-        
+<div class="auth-wrap">
+    <div class="brand">
+        <div class="brand-icon"><i class="fa-solid fa-chart-line"></i></div>
+        <div class="brand-name">ClickTrack</div>
+    </div>
+    <div class="auth-card">
+        <h1>Welcome back</h1>
+        <p class="subtitle">Sign in to your analytics dashboard</p>
+
         {% if form.errors %}
-            <ul class="errorlist"><li>Your username and password didn't match. Please try again.</li></ul>
+        <div class="error-msg">
+            <i class="fa-solid fa-circle-xmark"></i>
+            Invalid username or password. Please try again.
+        </div>
         {% endif %}
 
         <form method="POST">
             {% csrf_token %}
             <div class="form-group">
-                {{ form.as_p }}
+                <label>Username</label>
+                <input type="text" name="username" placeholder="Enter your username" autofocus>
             </div>
-            <!-- Django uses this "next" parameter to redirect the user after login -->
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" placeholder="Enter your password">
+            </div>
             <input type="hidden" name="next" value="{{ next|default:'/dashboard/' }}">
-            <button type="submit">Log In</button>
+            <button type="submit" class="btn-submit">Sign In &nbsp;<i class="fa-solid fa-arrow-right"></i></button>
         </form>
-        <a href="{% url 'register' %}" class="bottom-link">Don't have an account? Sign up</a>
+
+        <div class="auth-footer">
+            Don't have an account? <a href="{% url 'register' %}">Create one free</a>
+        </div>
     </div>
+</div>
 </body>
 </html>

@@ -1,168 +1,191 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Analytics: {{ tracker.title }}</title>
-    <style>
-        /* --- Premium Color Theme Applied --- */
-        body { 
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
-            margin: 40px auto; 
-            max-width: 1100px; 
-            background-color: #EADFDB; /* Soft Beige Background */
-            color: #333; 
-        }
-        
-        /* Navigation */
-        .back { 
-            display: inline-block; 
-            margin-bottom: 25px; 
-            text-decoration: none; 
-            color: #333; 
-            font-weight: 600; 
-            background-color: #D8C2B5; /* Warm Taupe */
-            padding: 10px 20px;
-            border-radius: 8px;
-            transition: all 0.2s ease-in-out;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .back:hover { 
-            background-color: #C0C4B6; /* Olive/Grey Green */
-            transform: translateY(-1px);
-        }
+{% extends "base.html" %}
 
-        /* Top Statistics Card */
-        .stats-card { 
-            background-color: #FFFFFF; 
-            padding: 30px; 
-            border-radius: 12px; 
-            margin-bottom: 35px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.03); 
-            border: 1px solid #D8C2B5; 
-        }
-        .stats-card h1 { margin-top: 0; color: #222; font-size: 28px; }
-        .stats-card p { font-size: 16px; color: #555; margin-bottom: 8px; }
-        
-        .id-badge { 
-            background-color: #AEAFB1; /* Cool Grey */
-            color: #FFFFFF; 
-            padding: 6px 12px; 
-            border-radius: 6px; 
-            font-family: monospace; 
-            font-size: 15px;
-            letter-spacing: 0.5px;
-        }
+{% block title %}{{ tracker.title }} Analytics — ClickTrack{% endblock %}
 
-        /* Data Table Styling */
-        h2 { color: #222; font-size: 22px; margin-bottom: 15px; }
-        
-        .table-container {
-            background-color: #FFFFFF;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-            border: 1px solid #D8C2B5;
-            overflow: hidden; /* Keeps rounded corners clean */
-        }
+{% block breadcrumb %}
+<nav class="breadcrumb">
+    <a href="{% url 'dashboard' %}">Dashboard</a>
+    <span class="sep">/</span>
+    <a href="{% url 'project_dashboard' project.id %}">{{ project.name }}</a>
+    <span class="sep">/</span>
+    <span class="current">{{ tracker.title }}</span>
+</nav>
+{% endblock %}
 
-        table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            background: #FFFFFF; 
-        }
-        th, td { 
-            padding: 16px 20px; 
-            text-align: left; 
-            border-bottom: 1px solid #EADFDB; 
-        }
-        th { 
-            background-color: #C0C4B6; /* Olive/Grey Green Header */
-            color: #222; 
-            font-weight: 700; 
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        tr:last-child td { border-bottom: none; } /* Removes bottom border from last row */
-        
-        tr:hover { 
-            background-color: rgba(216, 194, 181, 0.15); /* Very subtle D8C2B5 overlay on hover */
-        }
-        
-        .url-link { 
-            color: #333;
-            text-decoration: underline;
-            text-decoration-color: #AEAFB1;
-        }
-        .url-link:hover { color: #000; text-decoration-color: #C0C4B6; }
-        
-        .empty-state {
-            text-align: center;
-            padding: 40px !important;
-            color: #666;
-            font-size: 16px;
-        }
-    </style>
-</head>
-<body>
-    <a href="{% url 'project_dashboard' project.id %}" class="back">← Back to {{ project.name }}</a>
-    
-    <div class="stats-card">
-        <h1>Button: {{ tracker.title }}</h1>
-        <p><strong>Tracking ID:</strong> <span class="id-badge">{{ tracker.id }}</span></p>
-        <p><strong>Total Clicks:</strong> {{ clicks|length }}</p>
+{% block sidebar_extra %}
+<div class="nav-label">Project</div>
+<a href="{% url 'project_dashboard' project.id %}" class="nav-link">
+    <i class="fa-solid fa-folder-open"></i> {{ project.name|truncatechars:20 }}
+</a>
+<a href="{% url 'button_analytics' tracker.id %}" class="nav-link active">
+    <i class="fa-solid fa-chart-bar"></i> {{ tracker.title|truncatechars:18 }}
+</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Tracker header -->
+<div class="card" style="margin-bottom:24px;">
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap;">
+        <div style="display:flex; align-items:flex-start; gap:16px;">
+            <div style="
+                width:52px; height:52px; border-radius:12px;
+                background:var(--green-light); color:var(--green);
+                display:flex; align-items:center; justify-content:center;
+                font-size:22px; flex-shrink:0;
+            "><i class="fa-solid fa-toggle-on"></i></div>
+            <div>
+                <h1 style="font-size:22px; font-weight:800; color:var(--text); margin-bottom:4px;">{{ tracker.title }}</h1>
+                {% if tracker.description %}
+                <p style="color:var(--text-muted); font-size:13.5px; margin-bottom:6px;">{{ tracker.description }}</p>
+                {% endif %}
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <span style="font-size:12px; color:var(--text-dim);">Tracker ID:</span>
+                    <code style="
+                        background:var(--surface2); border:1px solid var(--border);
+                        padding:3px 8px; border-radius:5px;
+                        font-size:11px; color:var(--accent); font-family:'Courier New', monospace;
+                        cursor:pointer;" onclick="navigator.clipboard.writeText('{{ tracker.id }}');this.textContent='Copied!';setTimeout(()=>this.textContent='{{ tracker.id }}',1500);"
+                        title="Click to copy">{{ tracker.id }}</code>
+                </div>
+            </div>
+        </div>
+        <a href="{% url 'project_dashboard' project.id %}" class="btn btn-ghost btn-sm">
+            <i class="fa-solid fa-arrow-left"></i> Back to {{ project.name }}
+        </a>
+    </div>
+    <hr class="divider">
+    <div class="stats-grid" style="margin-bottom:0;">
+        <div class="stat-card">
+            <div class="stat-icon yellow"><i class="fa-solid fa-cursor"></i></div>
+            <div>
+                <div class="stat-value">{{ total }}</div>
+                <div class="stat-label">Total Clicks</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon indigo"><i class="fa-solid fa-globe"></i></div>
+            <div>
+                <div class="stat-value">{{ unique_countries }}</div>
+                <div class="stat-label">Countries</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="fa-solid fa-fingerprint"></i></div>
+            <div>
+                <div class="stat-value">{{ unique_ips }}</div>
+                <div class="stat-label">Unique IPs</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Click history table -->
+<div class="card">
+    <div class="card-header">
+        <div>
+            <div class="card-title">Click History</div>
+            <div class="card-subtitle">{{ total }} recorded event{{ total|pluralize }}</div>
+        </div>
+        {% if clicks %}
+        <span class="badge badge-green">
+            <i class="fa-solid fa-circle" style="font-size:8px; margin-right:5px;"></i>Live
+        </span>
+        {% endif %}
     </div>
 
-    <h2>Click History</h2>
-    <div class="table-container">
+    {% if clicks %}
+    <div class="table-wrap">
         <table>
             <thead>
                 <tr>
-                    <th>Date & Time</th>
+                    <th>Date &amp; Time</th>
                     <th>Location</th>
                     <th>IP Address</th>
                     <th>Source URL</th>
+                    <th>Device / Browser</th>
                 </tr>
             </thead>
             <tbody>
                 {% for click in clicks %}
                 <tr>
-                    <td style="white-space: nowrap;">{{ click.clicked_at|date:"M d, Y H:i" }}</td>
+                    <td style="white-space:nowrap; color:var(--text-muted); font-size:13px;">
+                        <i class="fa-regular fa-clock" style="margin-right:5px; color:var(--text-dim);"></i>
+                        {{ click.clicked_at|date:"M d, Y" }}
+                        <span style="color:var(--text-dim);"> {{ click.clicked_at|date:"H:i" }}</span>
+                    </td>
                     <td>
                         {% if click.city or click.country %}
-                            {{ click.city|default:"-" }}, {{ click.country|default:"Unknown" }}
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <i class="fa-solid fa-location-dot" style="color:var(--accent); font-size:12px;"></i>
+                            <span>{{ click.city|default:"" }}{% if click.city and click.country %}, {% endif %}{{ click.country|default:"Unknown" }}</span>
+                        </div>
                         {% else %}
-                            <span style="color: #AEAFB1; font-style: italic;">Local/Unknown</span>
+                        <span style="color:var(--text-dim); font-style:italic;">Local / Unknown</span>
                         {% endif %}
                     </td>
-                    <td style="font-family: monospace;">{{ click.ip_address|default:"Unknown" }}</td>
-                    <td class="url-link" title="{{ click.page_url }}" style="cursor: help;">
-                        {% if "google.com" in click.page_url|lower %}
-                            <span style="font-weight: 700; color: #4285F4;">Google</span>
-                        {% elif "bing.com" in click.page_url|lower %}
-                            <span style="font-weight: 700; color: #0089D6;">Bing</span>
-                        {% elif "yahoo.com" in click.page_url|lower %}
-                            <span style="font-weight: 700; color: #6001D2;">Yahoo</span>
-                        {% elif "facebook.com" in click.page_url|lower %}
-                            <span style="font-weight: 700; color: #1877F2;">Facebook</span>
-                        {% elif "linkedin.com" in click.page_url|lower %}
-                            <span style="font-weight: 700; color: #0A66C2;">LinkedIn</span>
+                    <td>
+                        <code style="
+                            font-family:'Courier New', monospace; font-size:12px;
+                            background:var(--surface2); padding:3px 7px;
+                            border-radius:4px; color:var(--text-muted);
+                        ">{{ click.ip_address|default:"—" }}</code>
+                    </td>
+                    <td style="max-width:220px;">
+                        {% if click.page_url %}
+                        {% with url_lower=click.page_url|lower %}
+                        {% if "google.com" in url_lower %}
+                            <span class="badge" style="background:rgba(66,133,244,0.12);color:#4285F4;">
+                                <i class="fa-brands fa-google" style="margin-right:4px;"></i>Google
+                            </span>
+                        {% elif "bing.com" in url_lower %}
+                            <span class="badge" style="background:rgba(0,137,212,0.12);color:#0089D4;">Bing</span>
+                        {% elif "facebook.com" in url_lower %}
+                            <span class="badge" style="background:rgba(24,119,242,0.12);color:#1877F2;">
+                                <i class="fa-brands fa-facebook" style="margin-right:4px;"></i>Facebook
+                            </span>
+                        {% elif "linkedin.com" in url_lower %}
+                            <span class="badge" style="background:rgba(10,102,194,0.12);color:#0A66C2;">
+                                <i class="fa-brands fa-linkedin" style="margin-right:4px;"></i>LinkedIn
+                            </span>
+                        {% elif "twitter.com" in url_lower or "x.com" in url_lower %}
+                            <span class="badge" style="background:rgba(29,161,242,0.12);color:#1DA1F2;">
+                                <i class="fa-brands fa-x-twitter" style="margin-right:4px;"></i>Twitter/X
+                            </span>
                         {% else %}
-                            <!-- Shows the first 45 characters, hover to see the rest -->
-                            {{ click.page_url|truncatechars:45 }}
+                            <span style="
+                                display:block; overflow:hidden; text-overflow:ellipsis;
+                                white-space:nowrap; color:var(--text-muted); font-size:12px;
+                            " title="{{ click.page_url }}">{{ click.page_url|truncatechars:50 }}</span>
+                        {% endif %}
+                        {% endwith %}
+                        {% else %}
+                        <span style="color:var(--text-dim);">—</span>
                         {% endif %}
                     </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="4" class="empty-state">
-                        No clicks recorded yet.
-                        <br><br>
-                        Make sure your JavaScript is setup correctly with ID: <strong>{{ tracker.id }}</strong>
+                    <td style="max-width:180px;">
+                        <span style="
+                            display:block; overflow:hidden; text-overflow:ellipsis;
+                            white-space:nowrap; color:var(--text-muted); font-size:12px;
+                        " title="{{ click.user_agent }}">{{ click.user_agent|truncatechars:35 }}</span>
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
-</body>
-</html>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon"><i class="fa-solid fa-cursor"></i></div>
+        <div class="empty-title">No clicks yet</div>
+        <div class="empty-desc">
+            Embed the integration code in your website. Once someone clicks the button, the data will appear here.
+        </div>
+        <a href="{% url 'project_dashboard' project.id %}" class="btn btn-ghost" style="margin-top:20px;">
+            <i class="fa-solid fa-code"></i> Get Integration Code
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
