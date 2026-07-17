@@ -81,6 +81,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True
 
+# Replit sits behind an HTTPS-terminating proxy — tell Django the real scheme/host
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGIN_URL = 'login'
 

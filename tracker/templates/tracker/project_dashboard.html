@@ -99,10 +99,14 @@
                     {% endif %}
                 </div>
                 <div style="display:flex; gap:8px; align-items:center; flex-shrink:0;">
-                    <span class="badge badge-green">
+                    <span class="badge badge-green" id="count-{{ button.id }}">
                         <i class="fa-solid fa-cursor" style="margin-right:4px;"></i>
                         {{ button.click_count }} click{{ button.click_count|pluralize }}
                     </span>
+                    <button class="btn btn-ghost btn-sm" style="color:var(--yellow); border-color:rgba(245,158,11,0.3);"
+                        onclick="testTrack('{{ button.id }}', this)" title="Send a real test click to verify tracking works">
+                        <i class="fa-solid fa-flask"></i> Test
+                    </button>
                     <a href="{% url 'button_analytics' button.id %}" class="btn btn-ghost btn-sm">
                         <i class="fa-solid fa-chart-bar"></i> Analytics
                     </a>
@@ -192,25 +196,31 @@
                         readonly
                         rows="14"
                         onclick="this.select()"
-                        style="resize:none; padding:14px 16px; height:220px;"><script>
-  document.querySelectorAll('.track-event').forEach(btn => {
+                        style="resize:none; padding:14px 16px; height:240px;"><script>
+(function() {
+  var TRACKING_BASE = 'https://{{ request.get_host }}';
+
+  document.querySelectorAll('.track-event').forEach(function(btn) {
     btn.addEventListener('click', async function() {
-      const trackerId = this.getAttribute('data-tracker-id');
-      const endpoint = '{{ request.scheme }}://{{ request.get_host }}/api/track/' + trackerId + '/';
-      const pageUrl = window.location.href;
-      const referrer = document.referrer || 'Direct';
-      let ip = '', city = '', country = '';
+      var trackerId = this.getAttribute('data-tracker-id');
+      var endpoint  = TRACKING_BASE + '/api/track/' + trackerId + '/';
+      var pageUrl   = window.location.href;
+      var referrer  = document.referrer || 'Direct';
+
+      var ip = '', city = '', country = '';
       try {
-        const geo = await fetch('https://ip-api.com/json/').then(r => r.json());
-        ip = geo.query; city = geo.city; country = geo.country;
+        var geo = await fetch('https://ip-api.com/json/').then(function(r){ return r.json(); });
+        ip = geo.query || ''; city = geo.city || ''; country = geo.country || '';
       } catch(e) {}
+
       fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: pageUrl + ' (from: ' + referrer + ')', ip, city, country })
-      }).catch(console.error);
+        body: JSON.stringify({ url: pageUrl + ' (from: ' + referrer + ')', ip: ip, city: city, country: country })
+      }).catch(function(err){ console.warn('ClickTrack error:', err); });
     });
   });
+})();
 </script></textarea>
                 </div>
 
@@ -281,24 +291,92 @@ document.getElementById('createBtnModal').addEventListener('click', function(e) 
     if (e.target === this) this.classList.remove('open');
 });
 
+/* ── Copy snippet ── */
 function copySnippet(btn) {
     const targetId = btn.getAttribute('data-target');
     const textarea = document.getElementById(targetId);
-    navigator.clipboard.writeText(textarea.value).then(() => {
-        const orig = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
-        btn.style.color = 'var(--green)';
-        btn.style.borderColor = 'var(--green)';
-        setTimeout(() => {
-            btn.innerHTML = orig;
-            btn.style.color = '';
-            btn.style.borderColor = '';
-        }, 2000);
-    }).catch(() => {
-        // Fallback for older browsers
+    const text = textarea.value;
+    const orig = btn.innerHTML;
+
+    const finish = (ok) => {
+        btn.innerHTML = ok
+            ? '<i class="fa-solid fa-check"></i> Copied!'
+            : '<i class="fa-solid fa-xmark"></i> Failed';
+        btn.style.color = ok ? 'var(--green)' : 'var(--red)';
+        btn.style.borderColor = ok ? 'var(--green)' : 'var(--red)';
+        setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; btn.style.borderColor = ''; }, 2000);
+    };
+
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => finish(true)).catch(() => finish(false));
+    } else {
         textarea.select();
-        document.execCommand('copy');
-    });
+        finish(document.execCommand('copy'));
+    }
+}
+
+/* ── Live toast helper ── */
+function showToast(msg, type) {
+    const icons = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info' };
+    const stack = document.getElementById('toastStack') || (() => {
+        const s = document.createElement('div');
+        s.id = 'toastStack';
+        s.className = 'toast-stack';
+        document.body.appendChild(s);
+        return s;
+    })();
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.innerHTML = `<i class="fa-solid ${icons[type] || icons.info}"></i>${msg}
+        <button class="toast-close" onclick="this.parentElement.remove()"><i class="fa-solid fa-xmark"></i></button>`;
+    stack.appendChild(t);
+    setTimeout(() => { t.style.transition='opacity .4s'; t.style.opacity='0'; setTimeout(()=>t.remove(),400); }, 4000);
+}
+
+/* ── Test Tracking ── */
+async function testTrack(trackerId, btn) {
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Testing…';
+
+    try {
+        // Geo lookup (optional — won't block if it fails)
+        let ip = '', city = '', country = '';
+        try {
+            const geo = await fetch('https://ip-api.com/json/').then(r => r.json());
+            ip = geo.query || ''; city = geo.city || ''; country = geo.country || '';
+        } catch(e) {}
+
+        const res = await fetch(`/api/track/${trackerId}/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                url: window.location.href + ' (test click from dashboard)',
+                ip, city, country
+            })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.status === 'success') {
+            showToast('✅ Test click recorded! Refresh Analytics to see it.', 'success');
+            // Update the badge count optimistically
+            const badge = document.getElementById('count-' + trackerId);
+            if (badge) {
+                const m = badge.textContent.trim().match(/^(\d+)/);
+                if (m) {
+                    const n = parseInt(m[1]) + 1;
+                    badge.innerHTML = `<i class="fa-solid fa-cursor" style="margin-right:4px;"></i>${n} click${n !== 1 ? 's' : ''}`;
+                }
+            }
+        } else {
+            showToast(`❌ Tracking failed: ${data.message || res.status}`, 'error');
+        }
+    } catch(err) {
+        showToast(`❌ Network error: ${err.message}`, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = orig;
+    }
 }
 </script>
 {% endblock %}

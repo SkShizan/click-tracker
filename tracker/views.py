@@ -134,10 +134,25 @@ def get_client_ip(request):
 
 @csrf_exempt
 def track_click(request, tracker_id):
+    # Allow preflight CORS requests
+    if request.method == 'OPTIONS':
+        response = JsonResponse({'status': 'ok'})
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Content-Type'
+        return response
+
     if request.method == 'POST':
         try:
             tracker = get_object_or_404(ButtonTracker, id=tracker_id)
-            data = json.loads(request.body)
+
+            # Safely parse body — handle empty or malformed JSON
+            body = request.body
+            try:
+                data = json.loads(body) if body else {}
+            except (json.JSONDecodeError, ValueError):
+                data = {}
+
             page_url = data.get('url', '')
             user_agent = request.META.get('HTTP_USER_AGENT', '')
 
@@ -145,23 +160,34 @@ def track_click(request, tracker_id):
             city = data.get('city', '')
             country = data.get('country', '')
 
-            if not city and ip_address and ip_address not in ('127.0.0.1', '::1'):
+            # Server-side geo fallback using HTTPS
+            if not city and ip_address and ip_address not in ('127.0.0.1', '::1', ''):
                 try:
-                    geo = requests.get(f'http://ip-api.com/json/{ip_address}', timeout=2).json()
-                    city = geo.get('city', '')
-                    country = geo.get('country', '')
+                    geo = requests.get(
+                        f'https://ip-api.com/json/{ip_address}',
+                        timeout=3
+                    ).json()
+                    if geo.get('status') == 'success':
+                        city = geo.get('city', '')
+                        country = geo.get('country', '')
                 except Exception:
                     pass
 
             ClickEvent.objects.create(
                 tracker=tracker,
-                ip_address=ip_address,
+                ip_address=ip_address or None,
                 city=city,
                 country=country,
                 page_url=page_url,
                 user_agent=user_agent,
             )
-            return JsonResponse({'status': 'success'})
+            response = JsonResponse({'status': 'success', 'message': 'Click recorded'})
+            response['Access-Control-Allow-Origin'] = '*'
+            return response
+
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+            response = JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+            response['Access-Control-Allow-Origin'] = '*'
+            return response
+
     return JsonResponse({'status': 'invalid method'}, status=405)
