@@ -4,46 +4,156 @@
     <meta charset="UTF-8">
     <title>Analytics: {{ tracker.title }}</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px auto; max-width: 1000px; color: #333; }
-        .back { text-decoration: none; color: #0d6efd; font-weight: bold; margin-bottom: 20px; display: inline-block; }
-        .stats-card { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px; border: 1px solid #e9ecef; }
-        table { width: 100%; border-collapse: collapse; background: #fff; }
-        th, td { border: 1px solid #dee2e6; padding: 12px 15px; text-align: left; }
-        th { background-color: #f8f9fa; font-weight: bold; }
-        tr:nth-child(even) { background-color: #fdfdfd; }
+        /* --- Premium Color Theme Applied --- */
+        body { 
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
+            margin: 40px auto; 
+            max-width: 1100px; 
+            background-color: #EADFDB; /* Soft Beige Background */
+            color: #333; 
+        }
+        
+        /* Navigation */
+        .back { 
+            display: inline-block; 
+            margin-bottom: 25px; 
+            text-decoration: none; 
+            color: #333; 
+            font-weight: 600; 
+            background-color: #D8C2B5; /* Warm Taupe */
+            padding: 10px 20px;
+            border-radius: 8px;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .back:hover { 
+            background-color: #C0C4B6; /* Olive/Grey Green */
+            transform: translateY(-1px);
+        }
+
+        /* Top Statistics Card */
+        .stats-card { 
+            background-color: #FFFFFF; 
+            padding: 30px; 
+            border-radius: 12px; 
+            margin-bottom: 35px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03); 
+            border: 1px solid #D8C2B5; 
+        }
+        .stats-card h1 { margin-top: 0; color: #222; font-size: 28px; }
+        .stats-card p { font-size: 16px; color: #555; margin-bottom: 8px; }
+        
+        .id-badge { 
+            background-color: #AEAFB1; /* Cool Grey */
+            color: #FFFFFF; 
+            padding: 6px 12px; 
+            border-radius: 6px; 
+            font-family: monospace; 
+            font-size: 15px;
+            letter-spacing: 0.5px;
+        }
+
+        /* Data Table Styling */
+        h2 { color: #222; font-size: 22px; margin-bottom: 15px; }
+        
+        .table-container {
+            background-color: #FFFFFF;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            border: 1px solid #D8C2B5;
+            overflow: hidden; /* Keeps rounded corners clean */
+        }
+
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            background: #FFFFFF; 
+        }
+        th, td { 
+            padding: 16px 20px; 
+            text-align: left; 
+            border-bottom: 1px solid #EADFDB; 
+        }
+        th { 
+            background-color: #C0C4B6; /* Olive/Grey Green Header */
+            color: #222; 
+            font-weight: 700; 
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        tr:last-child td { border-bottom: none; } /* Removes bottom border from last row */
+        
+        tr:hover { 
+            background-color: rgba(216, 194, 181, 0.15); /* Very subtle D8C2B5 overlay on hover */
+        }
+        
+        .url-link { 
+            color: #333;
+            text-decoration: underline;
+            text-decoration-color: #AEAFB1;
+        }
+        .url-link:hover { color: #000; text-decoration-color: #C0C4B6; }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px !important;
+            color: #666;
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
     <a href="{% url 'project_dashboard' project.id %}" class="back">← Back to {{ project.name }}</a>
     
     <div class="stats-card">
-        <h1 style="margin-top: 0;">Button: {{ tracker.title }}</h1>
-        <p><strong>Tracking ID:</strong> <span style="font-family: monospace;">{{ tracker.id }}</span></p>
+        <h1>Button: {{ tracker.title }}</h1>
+        <p><strong>Tracking ID:</strong> <span class="id-badge">{{ tracker.id }}</span></p>
         <p><strong>Total Clicks:</strong> {{ clicks|length }}</p>
     </div>
 
     <h2>Click History</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Date & Time</th>
-                <th>Location</th>
-                <th>IP Address</th>
-                <th>Source URL</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for click in clicks %}
-            <tr>
-                <td style="white-space: nowrap;">{{ click.clicked_at|date:"M d, Y H:i" }}</td>
-                <td>{{ click.city|default:"-" }}, {{ click.country|default:"Unknown" }}</td>
-                <td style="font-family: monospace;">{{ click.ip_address|default:"Unknown" }}</td>
-                <td><a href="{{ click.page_url }}" target="_blank">{{ click.page_url|truncatechars:50 }}</a></td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="4" style="text-align: center; padding: 30px;">No clicks recorded yet.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date & Time</th>
+                    <th>Location</th>
+                    <th>IP Address</th>
+                    <th>Source URL</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for click in clicks %}
+                <tr>
+                    <td style="white-space: nowrap;">{{ click.clicked_at|date:"M d, Y H:i" }}</td>
+                    <td>
+                        {% if click.city or click.country %}
+                            {{ click.city|default:"-" }}, {{ click.country|default:"Unknown" }}
+                        {% else %}
+                            <span style="color: #AEAFB1; font-style: italic;">Local/Unknown</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-family: monospace;">{{ click.ip_address|default:"Unknown" }}</td>
+                    <td>
+                        {% if click.page_url %}
+                            <a href="{{ click.page_url }}" target="_blank" class="url-link">{{ click.page_url|truncatechars:50 }}</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="empty-state">
+                        No clicks recorded yet.
+                        <br><br>
+                        Make sure your JavaScript is setup correctly with ID: <strong>{{ tracker.id }}</strong>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </body>
 </html>

@@ -4,19 +4,157 @@
     <meta charset="UTF-8">
     <title>Tracking Dashboard</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px auto; max-width: 800px; color: #333; }
-        .header { display: flex; justify-content: space-between; align-items: center; }
-        .tracker-card { border: 1px solid #e0e0e0; padding: 20px; margin-bottom: 25px; border-radius: 8px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .form-container { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 40px; border: 1px solid #e9ecef; }
+        /* --- Premium Color Theme Applied --- */
+        body { 
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
+            margin: 40px auto; 
+            max-width: 900px; 
+            background-color: #EADFDB; /* Soft Beige Background */
+            color: #333; 
+        }
+        
+        /* Header & Logout */
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 35px;
+        }
+        .header h1 { 
+            margin: 0; 
+            color: #222; 
+            font-size: 32px; 
+        }
+        .btn-logout {
+            background-color: transparent;
+            color: #333;
+            border: 2px solid #AEAFB1; /* Cool Grey */
+            padding: 8px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        .btn-logout:hover {
+            background-color: #AEAFB1;
+            color: #FFFFFF;
+        }
+
+        /* Form Container */
+        .form-container { 
+            background: #FFFFFF; 
+            padding: 30px; 
+            border-radius: 12px; 
+            margin-bottom: 40px; 
+            border: 1px solid #D8C2B5; /* Warm Taupe */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        }
+        .form-container h3 { margin-top: 0; color: #222; font-size: 22px; margin-bottom: 20px; }
+        
         .form-group { margin-bottom: 15px; }
-        input[type="text"] { padding: 10px; width: 100%; max-width: 400px; border: 1px solid #ccc; border-radius: 4px; }
-        button { padding: 10px 20px; background: #0d6efd; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        button:hover { background: #0b5ed7; }
-        .btn-danger { background: #dc3545; padding: 8px 15px; }
-        .btn-success { background: #198754; color: white; text-decoration: none; padding: 8px 15px; border-radius: 4px; display: inline-block; font-size: 14px;}
-        .id-badge { background: #e9ecef; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 14px; }
-        .code-box { margin-top: 20px; background: #f1f3f5; padding: 15px; border: 1px solid #ced4da; border-radius: 5px; }
-        textarea { width: 100%; height: 260px; font-family: monospace; font-size: 13px; padding: 10px; border: 1px solid #adb5bd; border-radius: 4px; resize: vertical; box-sizing: border-box; background: #fff; }
+        
+        input[type="text"] { 
+            padding: 12px 15px; 
+            width: 100%; 
+            max-width: 450px; 
+            border: 1px solid #AEAFB1; 
+            border-radius: 6px; 
+            font-size: 15px;
+            background-color: #FAFAFA;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #C0C4B6; /* Olive/Grey Green */
+            box-shadow: 0 0 0 3px rgba(192, 196, 182, 0.3);
+            background-color: #FFFFFF;
+        }
+        
+        .btn-submit { 
+            padding: 12px 24px; 
+            background: #C0C4B6; 
+            color: #222; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: 700;
+            font-size: 15px;
+            transition: all 0.2s ease;
+        }
+        .btn-submit:hover { 
+            background: #AEAFB1; 
+            color: #FFFFFF;
+        }
+
+        /* Tracker Cards */
+        h2.section-title { color: #222; font-size: 24px; margin-bottom: 20px; }
+        
+        .tracker-card { 
+            background: #FFFFFF; 
+            border: 1px solid #D8C2B5; 
+            padding: 30px; 
+            margin-bottom: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            transition: border-color 0.2s ease;
+        }
+        .tracker-card:hover { border-color: #C0C4B6; }
+        
+        .tracker-card h3 { margin-top: 0; color: #222; font-size: 22px; margin-bottom: 8px; }
+        .tracker-card p { color: #555; margin-top: 0; margin-bottom: 20px; line-height: 1.5; }
+        
+        .btn-view { 
+            background: #D8C2B5; 
+            color: #222; 
+            text-decoration: none; 
+            padding: 10px 20px; 
+            border-radius: 6px; 
+            font-weight: 600;
+            font-size: 14px;
+            display: inline-block;
+            transition: all 0.2s ease;
+        }
+        .btn-view:hover { background: #C0C4B6; }
+
+        /* Code Snippet Box */
+        .code-box { 
+            margin-top: 25px;
+            background: #FAFAFA; 
+            padding: 20px; 
+            border-radius: 8px;
+            border: 1px solid #AEAFB1;
+        }
+        .code-box p { margin-top: 0; font-size: 14px; font-weight: 700; color: #222; margin-bottom: 10px; }
+        
+        textarea { 
+            width: 100%; 
+            height: 280px; 
+            font-family: 'Courier New', Courier, monospace; 
+            font-size: 13.5px; 
+            padding: 15px; 
+            border-radius: 6px; 
+            border: 1px solid #D8C2B5;
+            background-color: #FFFFFF;
+            color: #333;
+            resize: vertical; 
+            box-sizing: border-box; 
+            line-height: 1.4;
+        }
+        textarea:focus { outline: none; border-color: #C0C4B6; }
+        
+        .code-hint { color: #AEAFB1; display: block; margin-top: 8px; font-size: 13px; font-style: italic; }
+
+        .empty-state {
+            background: #FFFFFF;
+            padding: 40px;
+            text-align: center;
+            border-radius: 12px;
+            border: 1px dashed #AEAFB1;
+            color: #666;
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
@@ -24,12 +162,12 @@
         <h1>Tracking Dashboard</h1>
         <form action="{% url 'logout' %}" method="post">
             {% csrf_token %}
-            <button type="submit" class="btn-danger">Logout</button>
+            <button type="submit" class="btn-logout">Logout</button>
         </form>
     </div>
 
     <div class="form-container">
-        <h3 style="margin-top: 0;">Create New Button Tracker</h3>
+        <h3>Create New Button Tracker</h3>
         <form method="POST">
             {% csrf_token %}
             <div class="form-group">
@@ -38,23 +176,23 @@
             <div class="form-group">
                 <input type="text" name="description" placeholder="Optional description or note">
             </div>
-            <button type="submit">Create Tracker</button>
+            <button type="submit" class="btn-submit">Create Tracker</button>
         </form>
     </div>
 
-    <h2>Your Active Trackers</h2>
+    <h2 class="section-title">Your Active Trackers</h2>
     {% for tracker in trackers %}
         <div class="tracker-card">
-            <h3 style="margin-top: 0;">{{ tracker.title }}</h3>
-            {% if tracker.description %}<p style="color: #666;">{{ tracker.description }}</p>{% endif %}
+            <h3>{{ tracker.title }}</h3>
+            {% if tracker.description %}<p>{{ tracker.description }}</p>{% endif %}
             
             <div style="margin: 15px 0;">
-                <a href="{% url 'analytics' tracker.id %}" class="btn-success">View Analytics</a>
+                <a href="{% url 'analytics' tracker.id %}" class="btn-view">View Analytics →</a>
             </div>
 
             <!-- DYNAMIC CODE SNIPPET BOX -->
             <div class="code-box">
-                <p style="margin-top: 0; font-size: 14px; font-weight: bold; color: #495057;">Integration Code:</p>
+                <p>Integration Code:</p>
                 <!-- onclick="this.select()" allows the user to click once to highlight all the code -->
                 <textarea readonly onclick="this.select()"><!-- 1. Add this attribute to your HTML button -->
 <button class="track-event" data-tracker-id="{{ tracker.id }}">Click Me</button>
@@ -77,11 +215,13 @@
       });
   });
 </script></textarea>
-                <small style="color: #6c757d; display: block; margin-top: 5px;">Click inside the box to select all, then copy and paste into your external website.</small>
+                <small class="code-hint">Click inside the box to select all, then copy and paste into your external website.</small>
             </div>
         </div>
     {% empty %}
-        <p style="color: #666; font-style: italic;">You haven't created any trackers yet. Create one above to get started.</p>
+        <div class="empty-state">
+            <p style="margin: 0;">You haven't created any trackers yet. Create one above to get started.</p>
+        </div>
     {% endfor %}
 </body>
 </html>
