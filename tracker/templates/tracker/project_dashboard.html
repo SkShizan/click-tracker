@@ -167,16 +167,16 @@
                         </button>
                     </div>
                     <textarea id="js-{{ button.id }}" class="code-area" readonly onclick="this.select()"
-                        style="resize:none; padding:14px 16px; height:180px;"><script>
+                        style="resize:none; padding:14px 16px; height:160px;"><script>
 (function() {
   var BASE = 'https://{{ request.get_host }}';
   document.querySelectorAll('.track-event').forEach(function(btn) {
     btn.addEventListener('click', function() {
       var id = this.getAttribute('data-tracker-id');
+      /* No Content-Type header = text/plain = simple CORS request, no preflight needed */
       fetch(BASE + '/api/track/' + id + '/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ page_url: window.location.href, referrer: document.referrer || '' })
+        method: 'POST', keepalive: true,
+        body: JSON.stringify({ page_url: location.href, referrer: document.referrer })
       }).catch(function(){});
     });
   });
@@ -279,42 +279,40 @@
                         </button>
                     </div>
                     <textarea id="site-js-{{ st.id }}" class="code-area" readonly onclick="this.select()"
-                        style="resize:none; padding:14px 16px; height:320px;"><script>
-/* ClickTrack Site Tracker — auto-detects every click */
+                        style="resize:none; padding:14px 16px; height:310px;"><script>
+/* ClickTrack Site Tracker */
 (function() {
-  var ENDPOINT = 'https://{{ request.get_host }}/api/autotrack/{{ st.id }}/';
+  var E = 'https://{{ request.get_host }}/api/autotrack/{{ st.id }}/';
 
   document.addEventListener('click', function(e) {
-    var el = e.target;
+    var el = e.target, found = el;
 
-    /* Walk up to find the nearest meaningful interactive element */
-    var found = el;
+    /* Walk up DOM to find nearest interactive element */
     for (var i = 0; i < 6; i++) {
       if (!found || found === document.body) { found = el; break; }
-      var tag = (found.tagName || '').toLowerCase();
-      var role = found.getAttribute ? found.getAttribute('role') : '';
-      if (['a','button','input','select','textarea','label'].indexOf(tag) !== -1 ||
-          role === 'button' || found.getAttribute('onclick')) break;
+      var t = (found.tagName || '').toLowerCase();
+      if (['a','button','input','select','textarea','label'].indexOf(t) > -1 ||
+          (found.getAttribute && (found.getAttribute('role') === 'button' || found.getAttribute('onclick')))) break;
       found = found.parentElement || el;
     }
 
-    var payload = JSON.stringify({
-      page_url:      window.location.href,
-      referrer:      document.referrer || '',
-      element_tag:   found.tagName  || '',
-      element_text:  ((found.innerText || found.value || found.getAttribute('aria-label') || '').trim()).slice(0, 200),
-      element_id:    found.id       || '',
-      element_class: (found.className || '').slice(0, 200),
-      element_href:  found.href || (found.getAttribute ? found.getAttribute('href') : '') || ''
+    var body = JSON.stringify({
+      page_url:      location.href,
+      referrer:      document.referrer,
+      element_tag:   found.tagName || '',
+      element_text:  ((found.innerText || found.value || (found.getAttribute && found.getAttribute('aria-label')) || '').trim()).slice(0,200),
+      element_id:    found.id || '',
+      element_class: (found.className || '').toString().slice(0,200),
+      element_href:  found.href || (found.getAttribute && found.getAttribute('href')) || ''
     });
 
-    /* sendBeacon is fire-and-forget even on page navigation */
-    if (navigator.sendBeacon) {
-      navigator.sendBeacon(ENDPOINT, new Blob([payload], {type:'application/json'}));
-    } else {
-      fetch(ENDPOINT, { method:'POST', headers:{'Content-Type':'application/json'}, body:payload })
-        .catch(function(){});
-    }
+    /*
+     * IMPORTANT: No Content-Type header = browser sends text/plain
+     * text/plain is a "simple" CORS request — no preflight OPTIONS needed.
+     * This works cross-origin on any site without extra server config.
+     * keepalive:true ensures the request completes even during page navigation.
+     */
+    fetch(E, { method: 'POST', keepalive: true, body: body }).catch(function(){});
   });
 })();
 </script></textarea>
