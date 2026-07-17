@@ -114,34 +114,96 @@
             </div>
 
             <!-- Integration Code -->
-            <div style="margin-bottom:8px;">
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-                    <span style="font-size:12px; font-weight:600; color:var(--text-muted);">
-                        <i class="fa-solid fa-code" style="margin-right:5px;"></i>Integration Code
-                    </span>
-                    <button class="btn btn-ghost btn-sm" onclick="copyCode(this)" title="Copy to clipboard">
-                        <i class="fa-solid fa-copy"></i> Copy
-                    </button>
+            <div style="margin-top:4px;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                    <i class="fa-solid fa-code" style="color:var(--accent);"></i>
+                    <span style="font-size:13px; font-weight:700; color:var(--text);">Integration Code</span>
+                    <span style="font-size:11px; color:var(--text-dim); margin-left:2px;">— 2 steps to embed on your site</span>
                 </div>
-                <div class="code-wrap">
-                    <textarea class="code-area" readonly onclick="this.select()"><!-- 1. Add this attribute to your HTML button -->
-<button class="track-event" data-tracker-id="{{ button.id }}">Click Me</button>
 
-<!-- 2. Place this script right before your closing </body> tag -->
-<script>
+                <!-- Step 1: HTML Button -->
+                <div style="
+                    background:var(--bg); border:1px solid var(--border);
+                    border-radius:10px; overflow:hidden; margin-bottom:10px;
+                ">
+                    <div style="
+                        display:flex; align-items:center; justify-content:space-between;
+                        padding:10px 14px;
+                        background:var(--surface2); border-bottom:1px solid var(--border);
+                    ">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="
+                                background:var(--accent); color:#fff;
+                                font-size:10px; font-weight:800;
+                                padding:2px 7px; border-radius:20px; letter-spacing:0.3px;
+                            ">STEP 1</span>
+                            <span style="font-size:12px; font-weight:600; color:var(--text-muted);">
+                                Add this to your HTML — the button to track
+                            </span>
+                        </div>
+                        <button
+                            class="copy-btn btn btn-ghost btn-sm"
+                            data-target="html-{{ button.id }}"
+                            onclick="copySnippet(this)"
+                            style="gap:6px; min-width:80px;">
+                            <i class="fa-regular fa-copy"></i> Copy
+                        </button>
+                    </div>
+                    <textarea
+                        id="html-{{ button.id }}"
+                        class="code-area"
+                        readonly
+                        rows="1"
+                        onclick="this.select()"
+                        style="min-height:unset; height:46px; resize:none; padding:12px 16px; line-height:1.5;"><button class="track-event" data-tracker-id="{{ button.id }}">Your Button Text</button></textarea>
+                </div>
+
+                <!-- Step 2: Script -->
+                <div style="
+                    background:var(--bg); border:1px solid var(--border);
+                    border-radius:10px; overflow:hidden;
+                ">
+                    <div style="
+                        display:flex; align-items:center; justify-content:space-between;
+                        padding:10px 14px;
+                        background:var(--surface2); border-bottom:1px solid var(--border);
+                    ">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="
+                                background:var(--green); color:#fff;
+                                font-size:10px; font-weight:800;
+                                padding:2px 7px; border-radius:20px; letter-spacing:0.3px;
+                            ">STEP 2</span>
+                            <span style="font-size:12px; font-weight:600; color:var(--text-muted);">
+                                Paste this script before <code style="background:var(--surface);padding:1px 5px;border-radius:4px;font-size:11px;">&lt;/body&gt;</code>
+                            </span>
+                        </div>
+                        <button
+                            class="copy-btn btn btn-ghost btn-sm"
+                            data-target="js-{{ button.id }}"
+                            onclick="copySnippet(this)"
+                            style="gap:6px; min-width:80px;">
+                            <i class="fa-regular fa-copy"></i> Copy
+                        </button>
+                    </div>
+                    <textarea
+                        id="js-{{ button.id }}"
+                        class="code-area"
+                        readonly
+                        rows="14"
+                        onclick="this.select()"
+                        style="resize:none; padding:14px 16px; height:220px;"><script>
   document.querySelectorAll('.track-event').forEach(btn => {
     btn.addEventListener('click', async function() {
       const trackerId = this.getAttribute('data-tracker-id');
-      const endpoint = `{{ request.scheme }}://{{ request.get_host }}/api/track/${trackerId}/`;
+      const endpoint = '{{ request.scheme }}://{{ request.get_host }}/api/track/' + trackerId + '/';
       const pageUrl = window.location.href;
       const referrer = document.referrer || 'Direct';
-
       let ip = '', city = '', country = '';
       try {
         const geo = await fetch('https://ip-api.com/json/').then(r => r.json());
         ip = geo.query; city = geo.city; country = geo.country;
       } catch(e) {}
-
       fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -149,12 +211,15 @@
       }).catch(console.error);
     });
   });
-<\/script></textarea>
+</script></textarea>
                 </div>
-                <p style="font-size:11px; color:var(--text-dim); margin-top:6px;">
-                    <i class="fa-solid fa-circle-info" style="margin-right:4px;"></i>
-                    Click to select all, then copy and paste into your external website.
-                </p>
+
+                <div style="display:flex; align-items:center; gap:6px; margin-top:8px;">
+                    <i class="fa-solid fa-lightbulb" style="color:var(--yellow); font-size:11px;"></i>
+                    <span style="font-size:11px; color:var(--text-dim);">
+                        Only paste Step 2 once per page — it tracks <em>all</em> buttons with <code style="font-size:10px;">class="track-event"</code>.
+                    </span>
+                </div>
             </div>
         </div>
         {% endfor %}
@@ -215,5 +280,25 @@
 document.getElementById('createBtnModal').addEventListener('click', function(e) {
     if (e.target === this) this.classList.remove('open');
 });
+
+function copySnippet(btn) {
+    const targetId = btn.getAttribute('data-target');
+    const textarea = document.getElementById(targetId);
+    navigator.clipboard.writeText(textarea.value).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+        btn.style.color = 'var(--green)';
+        btn.style.borderColor = 'var(--green)';
+        setTimeout(() => {
+            btn.innerHTML = orig;
+            btn.style.color = '';
+            btn.style.borderColor = '';
+        }, 2000);
+    }).catch(() => {
+        // Fallback for older browsers
+        textarea.select();
+        document.execCommand('copy');
+    });
+}
 </script>
 {% endblock %}
