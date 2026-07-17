@@ -18,8 +18,11 @@
 {% endblock %}
 
 {% block topbar_actions %}
+<button class="btn btn-ghost btn-sm" onclick="document.getElementById('createSiteModal').classList.add('open')" title="Embed once in header/footer — auto-detects every click">
+    <i class="fa-solid fa-globe"></i> New Site Tracker
+</button>
 <button class="btn btn-primary" onclick="document.getElementById('createBtnModal').classList.add('open')">
-    <i class="fa-solid fa-plus"></i> New Tracker
+    <i class="fa-solid fa-plus"></i> New Button Tracker
 </button>
 {% endblock %}
 
@@ -57,7 +60,14 @@
             <div class="stat-icon indigo"><i class="fa-solid fa-toggle-on"></i></div>
             <div>
                 <div class="stat-value">{{ buttons|length }}</div>
-                <div class="stat-label">Trackers</div>
+                <div class="stat-label">Button Trackers</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon purple"><i class="fa-solid fa-globe"></i></div>
+            <div>
+                <div class="stat-value">{{ site_trackers|length }}</div>
+                <div class="stat-label">Site Trackers</div>
             </div>
         </div>
         <div class="stat-card">
@@ -70,12 +80,15 @@
     </div>
 </div>
 
-<!-- Buttons list -->
-<div class="card">
+<!-- ═══════════════════════════ BUTTON TRACKERS ═══════════════════════════ -->
+<div class="card" style="margin-bottom:24px;">
     <div class="card-header">
         <div>
-            <div class="card-title">Button Trackers</div>
-            <div class="card-subtitle">{{ buttons|length }} tracker{{ buttons|length|pluralize }} in this project</div>
+            <div class="card-title">
+                <i class="fa-solid fa-toggle-on" style="color:var(--accent); margin-right:6px;"></i>
+                Button Trackers
+            </div>
+            <div class="card-subtitle">Add <code style="font-size:11px;">class="track-event" data-tracker-id="…"</code> to any HTML button</div>
         </div>
         <button class="btn btn-primary btn-sm" onclick="document.getElementById('createBtnModal').classList.add('open')">
             <i class="fa-solid fa-plus"></i> Add Tracker
@@ -104,7 +117,7 @@
                         {{ button.click_count }} click{{ button.click_count|pluralize }}
                     </span>
                     <button class="btn btn-ghost btn-sm" style="color:var(--yellow); border-color:rgba(245,158,11,0.3);"
-                        onclick="testTrack('{{ button.id }}', this)" title="Send a real test click to verify tracking works">
+                        onclick="testBtnTrack('{{ button.id }}', this)" title="Send a real test click to verify tracking works">
                         <i class="fa-solid fa-flask"></i> Test
                     </button>
                     <a href="{% url 'button_analytics' button.id %}" class="btn btn-ghost btn-sm">
@@ -126,98 +139,45 @@
                 </div>
 
                 <!-- Step 1: HTML Button -->
-                <div style="
-                    background:var(--bg); border:1px solid var(--border);
-                    border-radius:10px; overflow:hidden; margin-bottom:10px;
-                ">
-                    <div style="
-                        display:flex; align-items:center; justify-content:space-between;
-                        padding:10px 14px;
-                        background:var(--surface2); border-bottom:1px solid var(--border);
-                    ">
+                <div style="background:var(--bg); border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:10px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--surface2); border-bottom:1px solid var(--border);">
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="
-                                background:var(--accent); color:#fff;
-                                font-size:10px; font-weight:800;
-                                padding:2px 7px; border-radius:20px; letter-spacing:0.3px;
-                            ">STEP 1</span>
-                            <span style="font-size:12px; font-weight:600; color:var(--text-muted);">
-                                Add this to your HTML — the button to track
-                            </span>
+                            <span style="background:var(--accent); color:#fff; font-size:10px; font-weight:800; padding:2px 7px; border-radius:20px; letter-spacing:0.3px;">STEP 1</span>
+                            <span style="font-size:12px; font-weight:600; color:var(--text-muted);">Add this HTML attribute to your button</span>
                         </div>
-                        <button
-                            class="copy-btn btn btn-ghost btn-sm"
-                            data-target="html-{{ button.id }}"
-                            onclick="copySnippet(this)"
-                            style="gap:6px; min-width:80px;">
+                        <button class="copy-btn btn btn-ghost btn-sm" data-target="html-{{ button.id }}" onclick="copySnippet(this)" style="gap:6px; min-width:80px;">
                             <i class="fa-regular fa-copy"></i> Copy
                         </button>
                     </div>
-                    <textarea
-                        id="html-{{ button.id }}"
-                        class="code-area"
-                        readonly
-                        rows="1"
-                        onclick="this.select()"
+                    <textarea id="html-{{ button.id }}" class="code-area" readonly rows="1" onclick="this.select()"
                         style="min-height:unset; height:46px; resize:none; padding:12px 16px; line-height:1.5;"><button class="track-event" data-tracker-id="{{ button.id }}">Your Button Text</button></textarea>
                 </div>
 
                 <!-- Step 2: Script -->
-                <div style="
-                    background:var(--bg); border:1px solid var(--border);
-                    border-radius:10px; overflow:hidden;
-                ">
-                    <div style="
-                        display:flex; align-items:center; justify-content:space-between;
-                        padding:10px 14px;
-                        background:var(--surface2); border-bottom:1px solid var(--border);
-                    ">
+                <div style="background:var(--bg); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--surface2); border-bottom:1px solid var(--border);">
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="
-                                background:var(--green); color:#fff;
-                                font-size:10px; font-weight:800;
-                                padding:2px 7px; border-radius:20px; letter-spacing:0.3px;
-                            ">STEP 2</span>
+                            <span style="background:var(--green); color:#fff; font-size:10px; font-weight:800; padding:2px 7px; border-radius:20px; letter-spacing:0.3px;">STEP 2</span>
                             <span style="font-size:12px; font-weight:600; color:var(--text-muted);">
-                                Paste this script before <code style="background:var(--surface);padding:1px 5px;border-radius:4px;font-size:11px;">&lt;/body&gt;</code>
+                                Paste once before <code style="background:var(--surface);padding:1px 5px;border-radius:4px;font-size:11px;">&lt;/body&gt;</code>
                             </span>
                         </div>
-                        <button
-                            class="copy-btn btn btn-ghost btn-sm"
-                            data-target="js-{{ button.id }}"
-                            onclick="copySnippet(this)"
-                            style="gap:6px; min-width:80px;">
+                        <button class="copy-btn btn btn-ghost btn-sm" data-target="js-{{ button.id }}" onclick="copySnippet(this)" style="gap:6px; min-width:80px;">
                             <i class="fa-regular fa-copy"></i> Copy
                         </button>
                     </div>
-                    <textarea
-                        id="js-{{ button.id }}"
-                        class="code-area"
-                        readonly
-                        rows="14"
-                        onclick="this.select()"
-                        style="resize:none; padding:14px 16px; height:240px;"><script>
+                    <textarea id="js-{{ button.id }}" class="code-area" readonly onclick="this.select()"
+                        style="resize:none; padding:14px 16px; height:180px;"><script>
 (function() {
-  var TRACKING_BASE = 'https://{{ request.get_host }}';
-
+  var BASE = 'https://{{ request.get_host }}';
   document.querySelectorAll('.track-event').forEach(function(btn) {
-    btn.addEventListener('click', async function() {
-      var trackerId = this.getAttribute('data-tracker-id');
-      var endpoint  = TRACKING_BASE + '/api/track/' + trackerId + '/';
-      var pageUrl   = window.location.href;
-      var referrer  = document.referrer || 'Direct';
-
-      var ip = '', city = '', country = '';
-      try {
-        var geo = await fetch('https://ip-api.com/json/').then(function(r){ return r.json(); });
-        ip = geo.query || ''; city = geo.city || ''; country = geo.country || '';
-      } catch(e) {}
-
-      fetch(endpoint, {
+    btn.addEventListener('click', function() {
+      var id = this.getAttribute('data-tracker-id');
+      fetch(BASE + '/api/track/' + id + '/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: pageUrl + ' (from: ' + referrer + ')', ip: ip, city: city, country: country })
-      }).catch(function(err){ console.warn('ClickTrack error:', err); });
+        body: JSON.stringify({ page_url: window.location.href, referrer: document.referrer || '' })
+      }).catch(function(){});
     });
   });
 })();
@@ -227,7 +187,8 @@
                 <div style="display:flex; align-items:center; gap:6px; margin-top:8px;">
                     <i class="fa-solid fa-lightbulb" style="color:var(--yellow); font-size:11px;"></i>
                     <span style="font-size:11px; color:var(--text-dim);">
-                        Only paste Step 2 once per page — it tracks <em>all</em> buttons with <code style="font-size:10px;">class="track-event"</code>.
+                        Step 2 only needs to be pasted once per page — it handles all <code style="font-size:10px;">track-event</code> buttons.
+                        IP &amp; location are detected server-side automatically.
                     </span>
                 </div>
             </div>
@@ -237,29 +198,176 @@
     {% else %}
     <div class="empty-state">
         <div class="empty-icon"><i class="fa-solid fa-toggle-on"></i></div>
-        <div class="empty-title">No trackers yet</div>
-        <div class="empty-desc">Add a button tracker to get the embed code and start recording clicks.</div>
-        <button class="btn btn-primary" style="margin-top:20px;"
-            onclick="document.getElementById('createBtnModal').classList.add('open')">
-            <i class="fa-solid fa-plus"></i> Add First Tracker
+        <div class="empty-title">No button trackers yet</div>
+        <div class="empty-desc">Track specific buttons — add a class to your HTML and paste the script once.</div>
+        <button class="btn btn-primary" style="margin-top:20px;" onclick="document.getElementById('createBtnModal').classList.add('open')">
+            <i class="fa-solid fa-plus"></i> Add Button Tracker
         </button>
     </div>
     {% endif %}
 </div>
 
-<!-- Create Button Modal -->
+<!-- ═══════════════════════════ SITE TRACKERS ═══════════════════════════ -->
+<div class="card">
+    <div class="card-header">
+        <div>
+            <div class="card-title">
+                <i class="fa-solid fa-globe" style="color:#a855f7; margin-right:6px;"></i>
+                Site Trackers
+                <span style="margin-left:8px; font-size:11px; font-weight:600; background:rgba(168,85,247,0.15); color:#a855f7; padding:2px 8px; border-radius:20px; letter-spacing:0.3px;">NEW</span>
+            </div>
+            <div class="card-subtitle">Embed one script in your header/footer — automatically records every click with element details, page, IP &amp; location</div>
+        </div>
+        <button class="btn btn-sm" style="background:rgba(168,85,247,0.15); color:#a855f7; border:1px solid rgba(168,85,247,0.3);"
+            onclick="document.getElementById('createSiteModal').classList.add('open')">
+            <i class="fa-solid fa-plus"></i> Add Site Tracker
+        </button>
+    </div>
+
+    {% if site_trackers %}
+    <div style="display:flex; flex-direction:column; gap:16px;">
+        {% for st in site_trackers %}
+        <div style="
+            background:var(--surface2); border:1px solid rgba(168,85,247,0.25);
+            border-radius:10px; padding:20px; transition:border-color 0.2s;
+        " onmouseover="this.style.borderColor='#a855f7'" onmouseout="this.style.borderColor='rgba(168,85,247,0.25)'">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                <div>
+                    <div style="font-weight:700; font-size:15px; color:var(--text); margin-bottom:4px; display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-globe" style="color:#a855f7; font-size:13px;"></i>
+                        {{ st.name }}
+                    </div>
+                    {% if st.description %}
+                    <div style="color:var(--text-muted); font-size:13px;">{{ st.description }}</div>
+                    {% endif %}
+                </div>
+                <div style="display:flex; gap:8px; align-items:center; flex-shrink:0;">
+                    <span class="badge" style="background:rgba(168,85,247,0.15); color:#a855f7;" id="site-count-{{ st.id }}">
+                        <i class="fa-solid fa-hand-pointer" style="margin-right:4px;"></i>
+                        {{ st.click_count }} click{{ st.click_count|pluralize }}
+                    </span>
+                    <button class="btn btn-ghost btn-sm" style="color:var(--yellow); border-color:rgba(245,158,11,0.3);"
+                        onclick="testSiteTrack('{{ st.id }}', this)" title="Send a test click to verify tracking works">
+                        <i class="fa-solid fa-flask"></i> Test
+                    </button>
+                    <a href="{% url 'site_analytics' st.id %}" class="btn btn-ghost btn-sm">
+                        <i class="fa-solid fa-chart-bar"></i> Analytics
+                    </a>
+                    <button class="btn btn-danger btn-sm btn-icon" title="Delete site tracker"
+                        onclick="confirmDelete('{% url 'delete_site_tracker' st.id %}', '{{ st.name|escapejs }}', 'site tracker')">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Embed Script -->
+            <div>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                    <i class="fa-solid fa-code" style="color:#a855f7;"></i>
+                    <span style="font-size:13px; font-weight:700; color:var(--text);">Embed Script</span>
+                    <span style="font-size:11px; color:var(--text-dim);">— paste inside your <code style="font-size:10px;">&lt;head&gt;</code> or just before <code style="font-size:10px;">&lt;/body&gt;</code></span>
+                </div>
+
+                <div style="background:var(--bg); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--surface2); border-bottom:1px solid var(--border);">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="background:#a855f7; color:#fff; font-size:10px; font-weight:800; padding:2px 7px; border-radius:20px; letter-spacing:0.3px;">ONE SCRIPT</span>
+                            <span style="font-size:12px; color:var(--text-muted);">Records every click — no HTML changes needed</span>
+                        </div>
+                        <button class="copy-btn btn btn-ghost btn-sm" data-target="site-js-{{ st.id }}" onclick="copySnippet(this)" style="gap:6px; min-width:80px;">
+                            <i class="fa-regular fa-copy"></i> Copy
+                        </button>
+                    </div>
+                    <textarea id="site-js-{{ st.id }}" class="code-area" readonly onclick="this.select()"
+                        style="resize:none; padding:14px 16px; height:320px;"><script>
+/* ClickTrack Site Tracker — auto-detects every click */
+(function() {
+  var ENDPOINT = 'https://{{ request.get_host }}/api/autotrack/{{ st.id }}/';
+
+  document.addEventListener('click', function(e) {
+    var el = e.target;
+
+    /* Walk up to find the nearest meaningful interactive element */
+    var found = el;
+    for (var i = 0; i < 6; i++) {
+      if (!found || found === document.body) { found = el; break; }
+      var tag = (found.tagName || '').toLowerCase();
+      var role = found.getAttribute ? found.getAttribute('role') : '';
+      if (['a','button','input','select','textarea','label'].indexOf(tag) !== -1 ||
+          role === 'button' || found.getAttribute('onclick')) break;
+      found = found.parentElement || el;
+    }
+
+    var payload = JSON.stringify({
+      page_url:      window.location.href,
+      referrer:      document.referrer || '',
+      element_tag:   found.tagName  || '',
+      element_text:  ((found.innerText || found.value || found.getAttribute('aria-label') || '').trim()).slice(0, 200),
+      element_id:    found.id       || '',
+      element_class: (found.className || '').slice(0, 200),
+      element_href:  found.href || (found.getAttribute ? found.getAttribute('href') : '') || ''
+    });
+
+    /* sendBeacon is fire-and-forget even on page navigation */
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(ENDPOINT, new Blob([payload], {type:'application/json'}));
+    } else {
+      fetch(ENDPOINT, { method:'POST', headers:{'Content-Type':'application/json'}, body:payload })
+        .catch(function(){});
+    }
+  });
+})();
+</script></textarea>
+                </div>
+
+                <div style="display:flex; align-items:flex-start; gap:6px; margin-top:10px; padding:10px 14px; background:rgba(168,85,247,0.06); border:1px solid rgba(168,85,247,0.15); border-radius:8px;">
+                    <i class="fa-solid fa-circle-info" style="color:#a855f7; font-size:12px; margin-top:2px; flex-shrink:0;"></i>
+                    <span style="font-size:12px; color:var(--text-muted); line-height:1.6;">
+                        <strong style="color:var(--text);">How it works:</strong>
+                        The script listens for every click on your page. When a visitor clicks anything — a button, link, image, or nav item — it automatically records the
+                        <strong>element type</strong>, <strong>button text</strong>, <strong>page URL</strong>, <strong>referrer</strong>,
+                        and the visitor's <strong>IP &amp; location</strong> (detected server-side). No HTML changes needed.
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon" style="color:#a855f7;"><i class="fa-solid fa-globe"></i></div>
+        <div class="empty-title">No site trackers yet</div>
+        <div class="empty-desc">
+            Don't have access to individual buttons? Paste one script in your header or footer and ClickTrack automatically
+            records every click — which element, which page, from where.
+        </div>
+        <button class="btn btn-sm" style="margin-top:20px; background:rgba(168,85,247,0.15); color:#a855f7; border:1px solid rgba(168,85,247,0.3);"
+            onclick="document.getElementById('createSiteModal').classList.add('open')">
+            <i class="fa-solid fa-plus"></i> Add Site Tracker
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ═══════════════════ MODALS ═══════════════════ -->
+
+<!-- Create Button Tracker Modal -->
 <div class="modal-backdrop" id="createBtnModal">
     <div class="modal" style="max-width:480px;">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
             <div class="modal-title" style="margin-bottom:0;">
-                <i class="fa-solid fa-plus-circle" style="color:var(--accent);margin-right:8px;"></i>Add Button Tracker
+                <i class="fa-solid fa-toggle-on" style="color:var(--accent);margin-right:8px;"></i>New Button Tracker
             </div>
             <button class="btn btn-ghost btn-icon btn-sm" onclick="document.getElementById('createBtnModal').classList.remove('open')">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">
+            Add a <code style="font-size:12px;">class="track-event"</code> attribute to a specific button, then embed the provided script.
+        </p>
         <form method="POST">
             {% csrf_token %}
+            <input type="hidden" name="tracker_type" value="button">
             <div class="form-group" style="margin-bottom:16px;">
                 <label style="display:block; font-size:13px; font-weight:600; color:var(--text-muted); margin-bottom:6px;">
                     Tracker Name <span style="color:var(--red);">*</span>
@@ -273,10 +381,46 @@
                 <input type="text" name="description" placeholder="e.g. Above the fold on homepage">
             </div>
             <div style="display:flex; gap:10px; justify-content:flex-end;">
-                <button type="button" class="btn btn-ghost"
-                    onclick="document.getElementById('createBtnModal').classList.remove('open')">Cancel</button>
-                <button type="submit" class="btn btn-primary">
-                    <i class="fa-solid fa-plus"></i> Create Tracker
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('createBtnModal').classList.remove('open')">Cancel</button>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Create Tracker</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Create Site Tracker Modal -->
+<div class="modal-backdrop" id="createSiteModal">
+    <div class="modal" style="max-width:480px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+            <div class="modal-title" style="margin-bottom:0;">
+                <i class="fa-solid fa-globe" style="color:#a855f7;margin-right:8px;"></i>New Site Tracker
+            </div>
+            <button class="btn btn-ghost btn-icon btn-sm" onclick="document.getElementById('createSiteModal').classList.remove('open')">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">
+            Paste one script anywhere on your page. It will automatically detect and record every click — no changes to individual elements needed.
+        </p>
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="tracker_type" value="site">
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block; font-size:13px; font-weight:600; color:var(--text-muted); margin-bottom:6px;">
+                    Tracker Name <span style="color:var(--red);">*</span>
+                </label>
+                <input type="text" name="title" placeholder="e.g. Main Website, Landing Page" required>
+            </div>
+            <div class="form-group" style="margin-bottom:24px;">
+                <label style="display:block; font-size:13px; font-weight:600; color:var(--text-muted); margin-bottom:6px;">
+                    Note <span style="color:var(--text-dim);">(optional)</span>
+                </label>
+                <input type="text" name="description" placeholder="e.g. All pages on mysite.com">
+            </div>
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('createSiteModal').classList.remove('open')">Cancel</button>
+                <button type="submit" class="btn btn-sm" style="background:#a855f7; color:#fff;">
+                    <i class="fa-solid fa-plus"></i> Create Site Tracker
                 </button>
             </div>
         </form>
@@ -286,9 +430,15 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<style>
+.stat-icon.purple { background: rgba(168,85,247,0.15); color: #a855f7; }
+</style>
 <script>
-document.getElementById('createBtnModal').addEventListener('click', function(e) {
-    if (e.target === this) this.classList.remove('open');
+/* ── Close modals on backdrop click ── */
+['createBtnModal','createSiteModal'].forEach(function(id) {
+    document.getElementById(id).addEventListener('click', function(e) {
+        if (e.target === this) this.classList.remove('open');
+    });
 });
 
 /* ── Copy snippet ── */
@@ -333,44 +483,69 @@ function showToast(msg, type) {
     setTimeout(() => { t.style.transition='opacity .4s'; t.style.opacity='0'; setTimeout(()=>t.remove(),400); }, 4000);
 }
 
-/* ── Test Tracking ── */
-async function testTrack(trackerId, btn) {
+/* ── Generic test helper ── */
+async function doTestFetch(url, body, badgeId, badgeTemplate) {
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (res.ok && data.status === 'success') {
+        showToast('✅ Test click recorded! View Analytics to see it.', 'success');
+        const badge = document.getElementById(badgeId);
+        if (badge) {
+            const m = badge.textContent.trim().match(/^(\d+)/);
+            if (m) {
+                const n = parseInt(m[1]) + 1;
+                badge.innerHTML = badgeTemplate(n);
+            }
+        }
+    } else {
+        showToast(`❌ Tracking failed: ${data.message || res.status}`, 'error');
+    }
+}
+
+/* ── Test Button Tracker ── */
+async function testBtnTrack(trackerId, btn) {
     const orig = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Testing…';
-
     try {
-        // Geo lookup (optional — won't block if it fails)
-        let ip = '', city = '', country = '';
-        try {
-            const geo = await fetch('https://ip-api.com/json/').then(r => r.json());
-            ip = geo.query || ''; city = geo.city || ''; country = geo.country || '';
-        } catch(e) {}
+        await doTestFetch(
+            `/api/track/${trackerId}/`,
+            { page_url: window.location.href + ' (test from dashboard)', referrer: '' },
+            'count-' + trackerId,
+            n => `<i class="fa-solid fa-cursor" style="margin-right:4px;"></i>${n} click${n !== 1 ? 's' : ''}`
+        );
+    } catch(err) {
+        showToast(`❌ Network error: ${err.message}`, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = orig;
+    }
+}
 
-        const res = await fetch(`/api/track/${trackerId}/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                url: window.location.href + ' (test click from dashboard)',
-                ip, city, country
-            })
-        });
-
-        const data = await res.json();
-        if (res.ok && data.status === 'success') {
-            showToast('✅ Test click recorded! Refresh Analytics to see it.', 'success');
-            // Update the badge count optimistically
-            const badge = document.getElementById('count-' + trackerId);
-            if (badge) {
-                const m = badge.textContent.trim().match(/^(\d+)/);
-                if (m) {
-                    const n = parseInt(m[1]) + 1;
-                    badge.innerHTML = `<i class="fa-solid fa-cursor" style="margin-right:4px;"></i>${n} click${n !== 1 ? 's' : ''}`;
-                }
-            }
-        } else {
-            showToast(`❌ Tracking failed: ${data.message || res.status}`, 'error');
-        }
+/* ── Test Site Tracker ── */
+async function testSiteTrack(trackerId, btn) {
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Testing…';
+    try {
+        await doTestFetch(
+            `/api/autotrack/${trackerId}/`,
+            {
+                page_url: window.location.href,
+                referrer: document.referrer || '',
+                element_tag: 'BUTTON',
+                element_text: 'Test Click from Dashboard',
+                element_id: 'test-btn',
+                element_class: 'btn btn-ghost',
+                element_href: ''
+            },
+            'site-count-' + trackerId,
+            n => `<i class="fa-solid fa-hand-pointer" style="margin-right:4px;"></i>${n} click${n !== 1 ? 's' : ''}`
+        );
     } catch(err) {
         showToast(`❌ Network error: ${err.message}`, 'error');
     } finally {

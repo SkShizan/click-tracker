@@ -8,10 +8,56 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.db.models import Count
-from .models import Project, ButtonTracker, ClickEvent
+from .models import Project, ButtonTracker, ClickEvent, SiteTracker, PageClickEvent
 
 
-# --- Authentication ---
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+def get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        return x_forwarded_for.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', '')
+
+
+def geo_lookup(ip):
+    """Server-side geo lookup. Returns (city, country) or ('', '')."""
+    if not ip or ip in ('127.0.0.1', '::1', ''):
+        return '', ''
+    # Skip RFC-1918 / link-local addresses
+    private_prefixes = ('10.', '192.168.', '172.16.', '172.17.', '172.18.',
+                        '172.19.', '172.20.', '172.21.', '172.22.', '172.23.',
+                        '172.24.', '172.25.', '172.26.', '172.27.', '172.28.',
+                        '172.29.', '172.30.', '172.31.', '169.254.', 'fc', 'fd')
+    if any(ip.startswith(p) for p in private_prefixes):
+        return '', ''
+    try:
+        geo = requests.get(f'https://ip-api.com/json/{ip}', timeout=3).json()
+        if geo.get('status') == 'success':
+            return geo.get('city', ''), geo.get('country', '')
+    except Exception:
+        pass
+    return '', ''
+
+
+def cors_response(data, status=200):
+    r = JsonResponse(data, status=status)
+    r['Access-Control-Allow-Origin'] = '*'
+    r['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+    r['Access-Control-Allow-Headers'] = 'Content-Type'
+    return r
+
+
+def cors_preflight():
+    r = JsonResponse({'status': 'ok'})
+    r['Access-Control-Allow-Origin'] = '*'
+    r['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+    r['Access-Control-Allow-Headers'] = 'Content-Type'
+    return r
+
+
+# ── Authentication ────────────────────────────────────────────────────────────
+
 def register(request):
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
@@ -25,7 +71,8 @@ def register(request):
     return render(request, 'registration/register.html', {'form': form})
 
 
-# --- LEVEL 1: Main Dashboard ---
+# ── LEVEL 1: Main Dashboard ───────────────────────────────────────────────────
+
 @login_required
 def main_dashboard(request):
     if request.method == 'POST':
@@ -46,12 +93,13 @@ def main_dashboard(request):
     total_projects = projects.count()
     total_buttons = ButtonTracker.objects.filter(project__user=request.user).count()
     total_clicks = ClickEvent.objects.filter(tracker__project__user=request.user).count()
+    total_site_clicks = PageClickEvent.objects.filter(tracker__project__user=request.user).count()
 
     context = {
         'projects': projects,
         'total_projects': total_projects,
         'total_buttons': total_buttons,
-        'total_clicks': total_clicks,
+        'total_clicks': total_clicks + total_site_clicks,
     }
     return render(request, 'tracker/main_dashboard.html', context)
 
@@ -66,27 +114,41 @@ def delete_project(request, project_id):
     return redirect('dashboard')
 
 
-# --- LEVEL 2: Project Dashboard ---
+# ── LEVEL 2: Project Dashboard ────────────────────────────────────────────────
+
 @login_required
 def project_dashboard(request, project_id):
     project = get_object_or_404(Project, id=project_id, user=request.user)
 
     if request.method == 'POST':
+        tracker_type = request.POST.get('tracker_type', 'button')
         title = request.POST.get('title', '').strip()
         description = request.POST.get('description', '').strip()
-        if title:
+
+        if not title:
+            messages.error(request, 'Name cannot be empty.')
+            return redirect('project_dashboard', project_id=project.id)
+
+        if tracker_type == 'site':
+            SiteTracker.objects.create(project=project, name=title, description=description)
+            messages.success(request, f'Site tracker "{title}" created.')
+        else:
             ButtonTracker.objects.create(project=project, title=title, description=description)
             messages.success(request, f'Button tracker "{title}" created.')
-            return redirect('project_dashboard', project_id=project.id)
-        else:
-            messages.error(request, 'Button name cannot be empty.')
+
+        return redirect('project_dashboard', project_id=project.id)
 
     buttons = project.buttons.annotate(click_count=Count('clicks')).order_by('-created_at')
-    total_clicks = ClickEvent.objects.filter(tracker__project=project).count()
+    site_trackers = project.site_trackers.annotate(click_count=Count('clicks')).order_by('-created_at')
+
+    total_btn_clicks = ClickEvent.objects.filter(tracker__project=project).count()
+    total_site_clicks = PageClickEvent.objects.filter(tracker__project=project).count()
+    total_clicks = total_btn_clicks + total_site_clicks
 
     context = {
         'project': project,
         'buttons': buttons,
+        'site_trackers': site_trackers,
         'total_clicks': total_clicks,
     }
     return render(request, 'tracker/project_dashboard.html', context)
@@ -103,13 +165,24 @@ def delete_button(request, tracker_id):
     return redirect('project_dashboard', project_id=project_id)
 
 
-# --- LEVEL 3: Button Analytics ---
+@login_required
+def delete_site_tracker(request, tracker_id):
+    tracker = get_object_or_404(SiteTracker, id=tracker_id, project__user=request.user)
+    project_id = tracker.project.id
+    if request.method == 'POST':
+        name = tracker.name
+        tracker.delete()
+        messages.success(request, f'Site tracker "{name}" deleted.')
+    return redirect('project_dashboard', project_id=project_id)
+
+
+# ── LEVEL 3a: Button Analytics ───────────────────────────────────────────────
+
 @login_required
 def button_analytics(request, tracker_id):
     tracker = get_object_or_404(ButtonTracker, id=tracker_id, project__user=request.user)
     clicks = tracker.clicks.all().order_by('-clicked_at')
 
-    # Aggregate stats
     total = clicks.count()
     unique_countries = clicks.exclude(country='').values('country').distinct().count()
     unique_ips = clicks.exclude(ip_address=None).values('ip_address').distinct().count()
@@ -124,70 +197,132 @@ def button_analytics(request, tracker_id):
     })
 
 
-# --- API ENDPOINTS ---
-def get_client_ip(request):
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        return x_forwarded_for.split(',')[0].strip()
-    return request.META.get('REMOTE_ADDR')
+# ── LEVEL 3b: Site Tracker Analytics ─────────────────────────────────────────
 
+@login_required
+def site_analytics(request, tracker_id):
+    tracker = get_object_or_404(SiteTracker, id=tracker_id, project__user=request.user)
+    clicks = tracker.clicks.all().order_by('-clicked_at')
+
+    total = clicks.count()
+    unique_pages = clicks.exclude(page_url='').values('page_url').distinct().count()
+    unique_countries = clicks.exclude(country='').values('country').distinct().count()
+    unique_ips = clicks.exclude(ip_address=None).values('ip_address').distinct().count()
+
+    top_pages = (
+        clicks.exclude(page_url='')
+        .values('page_url')
+        .annotate(count=Count('id'))
+        .order_by('-count')[:10]
+    )
+    top_elements = (
+        clicks.exclude(element_text='')
+        .values('element_tag', 'element_text')
+        .annotate(count=Count('id'))
+        .order_by('-count')[:10]
+    )
+
+    return render(request, 'tracker/site_analytics.html', {
+        'tracker': tracker,
+        'project': tracker.project,
+        'clicks': clicks[:200],  # cap table at 200 rows
+        'total': total,
+        'unique_pages': unique_pages,
+        'unique_countries': unique_countries,
+        'unique_ips': unique_ips,
+        'top_pages': top_pages,
+        'top_elements': top_elements,
+    })
+
+
+# ── API: Button Click Tracking ────────────────────────────────────────────────
 
 @csrf_exempt
 def track_click(request, tracker_id):
-    # Allow preflight CORS requests
     if request.method == 'OPTIONS':
-        response = JsonResponse({'status': 'ok'})
-        response['Access-Control-Allow-Origin'] = '*'
-        response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-        response['Access-Control-Allow-Headers'] = 'Content-Type'
-        return response
+        return cors_preflight()
 
-    if request.method == 'POST':
+    if request.method != 'POST':
+        return cors_response({'status': 'invalid method'}, 405)
+
+    try:
+        tracker = get_object_or_404(ButtonTracker, id=tracker_id)
+
+        body = request.body
         try:
-            tracker = get_object_or_404(ButtonTracker, id=tracker_id)
+            data = json.loads(body) if body else {}
+        except (json.JSONDecodeError, ValueError):
+            data = {}
 
-            # Safely parse body — handle empty or malformed JSON
-            body = request.body
-            try:
-                data = json.loads(body) if body else {}
-            except (json.JSONDecodeError, ValueError):
-                data = {}
+        page_url = data.get('url', '') or data.get('page_url', '')
+        referrer = data.get('referrer', '')
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
 
-            page_url = data.get('url', '')
-            user_agent = request.META.get('HTTP_USER_AGENT', '')
+        # Always resolve IP server-side — don't trust client-supplied geo
+        ip_address = get_client_ip(request)
+        city, country = geo_lookup(ip_address)
 
-            ip_address = data.get('ip') or get_client_ip(request)
-            city = data.get('city', '')
-            country = data.get('country', '')
+        ClickEvent.objects.create(
+            tracker=tracker,
+            ip_address=ip_address or None,
+            city=city,
+            country=country,
+            page_url=page_url,
+            referrer=referrer,
+            user_agent=user_agent,
+        )
+        return cors_response({'status': 'success', 'message': 'Click recorded'})
 
-            # Server-side geo fallback using HTTPS
-            if not city and ip_address and ip_address not in ('127.0.0.1', '::1', ''):
-                try:
-                    geo = requests.get(
-                        f'https://ip-api.com/json/{ip_address}',
-                        timeout=3
-                    ).json()
-                    if geo.get('status') == 'success':
-                        city = geo.get('city', '')
-                        country = geo.get('country', '')
-                except Exception:
-                    pass
+    except Exception as e:
+        return cors_response({'status': 'error', 'message': str(e)}, 400)
 
-            ClickEvent.objects.create(
-                tracker=tracker,
-                ip_address=ip_address or None,
-                city=city,
-                country=country,
-                page_url=page_url,
-                user_agent=user_agent,
-            )
-            response = JsonResponse({'status': 'success', 'message': 'Click recorded'})
-            response['Access-Control-Allow-Origin'] = '*'
-            return response
 
-        except Exception as e:
-            response = JsonResponse({'status': 'error', 'message': str(e)}, status=400)
-            response['Access-Control-Allow-Origin'] = '*'
-            return response
+# ── API: Site / Auto-Click Tracking ──────────────────────────────────────────
 
-    return JsonResponse({'status': 'invalid method'}, status=405)
+@csrf_exempt
+def track_auto_click(request, tracker_id):
+    if request.method == 'OPTIONS':
+        return cors_preflight()
+
+    if request.method != 'POST':
+        return cors_response({'status': 'invalid method'}, 405)
+
+    try:
+        tracker = get_object_or_404(SiteTracker, id=tracker_id)
+
+        body = request.body
+        try:
+            data = json.loads(body) if body else {}
+        except (json.JSONDecodeError, ValueError):
+            data = {}
+
+        page_url = data.get('page_url', '')
+        referrer = data.get('referrer', '')
+        element_tag = (data.get('element_tag', '') or '').upper()[:50]
+        element_text = (data.get('element_text', '') or '')[:300]
+        element_id = (data.get('element_id', '') or '')[:200]
+        element_class = (data.get('element_class', '') or '')[:300]
+        element_href = (data.get('element_href', '') or '')[:500]
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+
+        ip_address = get_client_ip(request)
+        city, country = geo_lookup(ip_address)
+
+        PageClickEvent.objects.create(
+            tracker=tracker,
+            ip_address=ip_address or None,
+            city=city,
+            country=country,
+            page_url=page_url,
+            referrer=referrer,
+            element_tag=element_tag,
+            element_text=element_text,
+            element_id=element_id,
+            element_class=element_class,
+            element_href=element_href,
+            user_agent=user_agent,
+        )
+        return cors_response({'status': 'success', 'message': 'Click recorded'})
+
+    except Exception as e:
+        return cors_response({'status': 'error', 'message': str(e)}, 400)
