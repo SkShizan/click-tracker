@@ -234,20 +234,42 @@
 <button class="track-event" data-tracker-id="{{ button.id }}">Click Me</button>
 
 <!-- 2. Place this script right before your closing </body> tag -->
+<!-- 2. Place this script right before your closing </body> tag -->
+<!-- 2. Place this script right before your closing </body> tag -->
 <script>
   document.querySelectorAll('.track-event').forEach(btn => {
-      btn.addEventListener('click', function() {
+      btn.addEventListener('click', async function() {
           const trackerId = this.getAttribute('data-tracker-id');
           const trackingEndpoint = `{{ request.scheme }}://{{ request.get_host }}/api/track/${trackerId}/`;
+
+          const currentUrl = window.location.href;
+          const trafficSource = document.referrer || "Direct";
+          const combinedData = currentUrl + " (Came from: " + trafficSource + ")";
+
+          // 3. Outsmart localhost by fetching the real IP & Location from the browser
+          let realIp = "", realCity = "", realCountry = "";
+          try {
+              const geoRes = await fetch('http://ip-api.com/json/');
+              const geoData = await geoRes.json();
+              realIp = geoData.query;
+              realCity = geoData.city;
+              realCountry = geoData.country;
+          } catch (e) { console.warn("Geo lookup failed"); }
 
           fetch(trackingEndpoint, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ url: window.location.href })
+              body: JSON.stringify({ 
+                  url: combinedData,
+                  ip: realIp,
+                  city: realCity,
+                  country: realCountry
+              })
           }).catch(err => console.error('Tracking error:', err));
       });
   });
-</script></textarea>
+</script>
+</textarea>
             </div>
         </div>
     {% empty %}

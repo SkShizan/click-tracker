@@ -92,16 +92,27 @@ def track_click(request, tracker_id):
             data = json.loads(request.body)
             page_url = data.get('url', '')
             user_agent = request.META.get('HTTP_USER_AGENT', '')
-            ip_address = get_client_ip(request)
+            
+            # 1. Grab the real IP/Location passed from the frontend JavaScript
+            ip_address = data.get('ip') or get_client_ip(request)
+            city = data.get('city', '')
+            country = data.get('country', '')
 
-            city, country = "", ""
-            if ip_address and ip_address != '127.0.0.1':
+            # 2. Fallback to backend lookup ONLY if frontend failed and it's not localhost
+            if not city and ip_address and ip_address != '127.0.0.1':
                 try:
                     geo = requests.get(f'http://ip-api.com/json/{ip_address}', timeout=2).json()
                     city, country = geo.get('city', ''), geo.get('country', '')
                 except: pass
 
-            ClickEvent.objects.create(tracker=tracker, ip_address=ip_address, city=city, country=country, page_url=page_url, user_agent=user_agent)
+            ClickEvent.objects.create(
+                tracker=tracker, 
+                ip_address=ip_address, 
+                city=city, 
+                country=country, 
+                page_url=page_url, 
+                user_agent=user_agent
+            )
             return JsonResponse({'status': 'success'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)

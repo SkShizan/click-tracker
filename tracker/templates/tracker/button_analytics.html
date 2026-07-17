@@ -135,11 +135,20 @@
                         {% endif %}
                     </td>
                     <td style="font-family: monospace;">{{ click.ip_address|default:"Unknown" }}</td>
-                    <td>
-                        {% if click.page_url %}
-                            <a href="{{ click.page_url }}" target="_blank" class="url-link">{{ click.page_url|truncatechars:50 }}</a>
+                    <td class="url-link" title="{{ click.page_url }}" style="cursor: help;">
+                        {% if "google.com" in click.page_url|lower %}
+                            <span style="font-weight: 700; color: #4285F4;">Google</span>
+                        {% elif "bing.com" in click.page_url|lower %}
+                            <span style="font-weight: 700; color: #0089D6;">Bing</span>
+                        {% elif "yahoo.com" in click.page_url|lower %}
+                            <span style="font-weight: 700; color: #6001D2;">Yahoo</span>
+                        {% elif "facebook.com" in click.page_url|lower %}
+                            <span style="font-weight: 700; color: #1877F2;">Facebook</span>
+                        {% elif "linkedin.com" in click.page_url|lower %}
+                            <span style="font-weight: 700; color: #0A66C2;">LinkedIn</span>
                         {% else %}
-                            -
+                            <!-- Shows the first 45 characters, hover to see the rest -->
+                            {{ click.page_url|truncatechars:45 }}
                         {% endif %}
                     </td>
                 </tr>
