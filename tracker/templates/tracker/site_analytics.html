@@ -192,7 +192,13 @@
                 {% for g in ip_groups %}
                 <tr>
                     <td>
+                        {% if g.ip_address %}
                         <code class="ip-code" style="color:var(--salmon);">{{ g.ip_address }}</code>
+                        {% else %}
+                        <span style="display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--text-muted); font-style:italic;">
+                            <i class="fa-solid fa-question-circle" style="color:var(--text-dim);"></i> Unknown / Local
+                        </span>
+                        {% endif %}
                     </td>
                     <td>
                         {% if g.city or g.country %}
@@ -225,9 +231,15 @@
                         </span>
                     </td>
                     <td>
+                        {% if g.ip_address %}
                         <a href="{% url 'site_ip_detail' tracker.id %}?ip={{ g.ip_address }}" class="btn btn-salmon btn-sm" style="white-space:nowrap;">
                             View {{ g.count }} click{{ g.count|pluralize }} <i class="fa-solid fa-arrow-right" style="font-size:10px;"></i>
                         </a>
+                        {% else %}
+                        <a href="{% url 'site_ip_detail' tracker.id %}?ip=__unknown__" class="btn btn-salmon btn-sm" style="white-space:nowrap;">
+                            View {{ g.count }} click{{ g.count|pluralize }} <i class="fa-solid fa-arrow-right" style="font-size:10px;"></i>
+                        </a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

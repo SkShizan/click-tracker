@@ -41,7 +41,11 @@
             "><i class="fa-solid fa-address-card"></i></div>
             <div>
                 <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px;">
+                    {% if unknown %}
+                    <h1 style="font-size:18px; font-weight:700; color:var(--text-muted); font-style:italic;">Unknown / Local IP</h1>
+                    {% else %}
                     <h1 style="font-size:18px; font-weight:800; color:var(--text); font-family:'Courier New', monospace;">{{ ip }}</h1>
+                    {% endif %}
                     <span class="badge badge-indigo">{{ total }} click{{ total|pluralize }}</span>
                 </div>
                 {% if location %}

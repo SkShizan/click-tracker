@@ -181,7 +181,7 @@ def delete_site_tracker(request, tracker_id):
 def build_ip_groups(clicks):
     """Return list of dicts, one per unique IP, with count/location/ua/times."""
     groups = list(
-        clicks.exclude(ip_address=None).exclude(ip_address='')
+        clicks.exclude(ip_address=None)
         .values('ip_address')
         .annotate(
             count=Count('id'),
@@ -190,10 +190,28 @@ def build_ip_groups(clicks):
         )
         .order_by('-count')
     )
+
+    # Also count clicks where IP could not be resolved (null) and add as Unknown group
+    unknown_count = clicks.filter(ip_address=None).count()
+    if unknown_count > 0:
+        from django.db.models import Min as _Min, Max as _Max
+        unk_qs = clicks.filter(ip_address=None)
+        unk_agg = unk_qs.aggregate(first_seen=_Min('clicked_at'), last_seen=_Max('clicked_at'))
+        sample = unk_qs.values('city', 'country', 'user_agent').first() or {}
+        groups.append({
+            'ip_address': None,
+            'count': unknown_count,
+            'first_seen': unk_agg['first_seen'],
+            'last_seen': unk_agg['last_seen'],
+            'city': sample.get('city', ''),
+            'country': sample.get('country', ''),
+            'user_agent': sample.get('user_agent', ''),
+        })
+
     if not groups:
         return groups
 
-    ips = [g['ip_address'] for g in groups]
+    ips = [g['ip_address'] for g in groups if g['ip_address']]
     # One sample row per IP for city/country/user_agent
     ip_meta = {}
     for row in clicks.filter(ip_address__in=ips).values('ip_address', 'city', 'country', 'user_agent'):
@@ -202,6 +220,8 @@ def build_ip_groups(clicks):
             ip_meta[ip] = {'city': row['city'], 'country': row['country'], 'user_agent': row['user_agent']}
 
     for g in groups:
+        if g['ip_address'] is None:
+            continue  # already enriched above
         meta = ip_meta.get(g['ip_address'], {})
         g['city'] = meta.get('city', '')
         g['country'] = meta.get('country', '')
@@ -238,7 +258,11 @@ def button_analytics(request, tracker_id):
 def button_ip_detail(request, tracker_id):
     tracker = get_object_or_404(ButtonTracker, id=tracker_id, project__user=request.user)
     ip = request.GET.get('ip', '')
-    clicks = tracker.clicks.filter(ip_address=ip).order_by('-clicked_at')
+    unknown = (ip == '__unknown__')
+    if unknown:
+        clicks = tracker.clicks.filter(ip_address=None).order_by('-clicked_at')
+    else:
+        clicks = tracker.clicks.filter(ip_address=ip).order_by('-clicked_at')
 
     sample = clicks.first()
     location = ''
@@ -252,6 +276,7 @@ def button_ip_detail(request, tracker_id):
         'tracker': tracker,
         'project': tracker.project,
         'ip': ip,
+        'unknown': unknown,
         'clicks': clicks,
         'location': location,
         'user_agent': sample.user_agent if sample else '',
@@ -304,7 +329,11 @@ def site_analytics(request, tracker_id):
 def site_ip_detail(request, tracker_id):
     tracker = get_object_or_404(SiteTracker, id=tracker_id, project__user=request.user)
     ip = request.GET.get('ip', '')
-    clicks = tracker.clicks.filter(ip_address=ip).order_by('-clicked_at')
+    unknown = (ip == '__unknown__')
+    if unknown:
+        clicks = tracker.clicks.filter(ip_address=None).order_by('-clicked_at')
+    else:
+        clicks = tracker.clicks.filter(ip_address=ip).order_by('-clicked_at')
 
     sample = clicks.first()
     location = ''
@@ -318,6 +347,7 @@ def site_ip_detail(request, tracker_id):
         'tracker': tracker,
         'project': tracker.project,
         'ip': ip,
+        'unknown': unknown,
         'clicks': clicks,
         'location': location,
         'user_agent': sample.user_agent if sample else '',

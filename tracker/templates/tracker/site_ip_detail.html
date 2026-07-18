@@ -41,7 +41,11 @@
             "><i class="fa-solid fa-address-card"></i></div>
             <div>
                 <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px;">
+                    {% if unknown %}
+                    <h1 style="font-size:18px; font-weight:700; color:var(--text-muted); font-style:italic;">Unknown / Local IP</h1>
+                    {% else %}
                     <h1 style="font-size:18px; font-weight:800; color:var(--text); font-family:'Courier New', monospace;">{{ ip }}</h1>
+                    {% endif %}
                     <span class="badge badge-salmon">{{ total }} click{{ total|pluralize }}</span>
                     <span style="font-size:10px; font-weight:700; background:var(--peach); color:#7a3f28; padding:2px 8px; border-radius:20px; letter-spacing:0.5px;">SITE TRACKER</span>
                 </div>
