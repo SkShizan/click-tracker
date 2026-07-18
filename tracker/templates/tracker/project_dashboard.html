@@ -29,8 +29,8 @@
 {% block content %}
 
 <!-- Project header -->
-<div class="card" style="margin-bottom:24px;">
-    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:20px;">
+<div class="card" style="margin-bottom:22px;">
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap;">
         <div style="display:flex; align-items:flex-start; gap:16px;">
             <div style="
                 width:52px; height:52px; border-radius:12px;
@@ -39,10 +39,10 @@
                 font-size:22px; flex-shrink:0;
             "><i class="fa-solid fa-folder-open"></i></div>
             <div>
-                <h1 style="font-size:22px; font-weight:800; color:var(--text); margin-bottom:4px;">{{ project.name }}</h1>
-                <p style="color:var(--text-muted); font-size:13.5px;">{{ project.description|default:"No description provided." }}</p>
+                <h1 style="font-size:21px; font-weight:800; color:var(--text); margin-bottom:4px;">{{ project.name }}</h1>
+                <p style="color:var(--text-muted); font-size:13px;">{{ project.description|default:"No description provided." }}</p>
                 <p style="color:var(--text-dim); font-size:12px; margin-top:6px;">
-                    <i class="fa-solid fa-calendar" style="margin-right:4px;"></i>
+                    <i class="fa-regular fa-calendar" style="margin-right:4px;"></i>
                     Created {{ project.created_at|date:"M d, Y" }}
                 </p>
             </div>
@@ -64,14 +64,14 @@
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon purple"><i class="fa-solid fa-globe"></i></div>
+            <div class="stat-icon teal"><i class="fa-solid fa-globe"></i></div>
             <div>
                 <div class="stat-value">{{ site_trackers|length }}</div>
                 <div class="stat-label">Site Trackers</div>
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon yellow"><i class="fa-solid fa-cursor"></i></div>
+            <div class="stat-icon yellow"><i class="fa-solid fa-hand-pointer"></i></div>
             <div>
                 <div class="stat-value">{{ total_clicks }}</div>
                 <div class="stat-label">Total Clicks</div>
@@ -81,14 +81,14 @@
 </div>
 
 <!-- ═══════════════════════════ BUTTON TRACKERS ═══════════════════════════ -->
-<div class="card" style="margin-bottom:24px;">
+<div class="card" style="margin-bottom:22px;">
     <div class="card-header">
         <div>
             <div class="card-title">
                 <i class="fa-solid fa-toggle-on" style="color:var(--accent); margin-right:6px;"></i>
                 Button Trackers
             </div>
-            <div class="card-subtitle">Add <code style="font-size:11px;">class="track-event" data-tracker-id="…"</code> to any HTML button</div>
+            <div class="card-subtitle">Add <code style="font-size:11px; background:var(--surface2); padding:1px 5px; border-radius:4px; border:1px solid var(--border);">class="track-event" data-tracker-id="…"</code> to any HTML button</div>
         </div>
         <button class="btn btn-primary btn-sm" onclick="document.getElementById('createBtnModal').classList.add('open')">
             <i class="fa-solid fa-plus"></i> Add Tracker
@@ -96,27 +96,29 @@
     </div>
 
     {% if buttons %}
-    <div style="display:flex; flex-direction:column; gap:16px;">
+    <div style="display:flex; flex-direction:column; gap:14px;">
         {% for button in buttons %}
         <div style="
             background:var(--surface2); border:1px solid var(--border);
-            border-radius:10px; padding:20px; transition:border-color 0.2s;
-        " onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+            border-radius:10px; padding:18px 20px; transition:border-color 0.2s, box-shadow 0.2s;
+        " onmouseover="this.style.borderColor='var(--accent)'; this.style.boxShadow='0 2px 12px rgba(0,109,119,0.10)'"
+           onmouseout="this.style.borderColor='var(--border)'; this.style.boxShadow='none'">
+
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
                 <div>
-                    <div style="font-weight:700; font-size:15px; color:var(--text); margin-bottom:4px;">
+                    <div style="font-weight:700; font-size:15px; color:var(--text); margin-bottom:3px;">
                         {{ button.title }}
                     </div>
                     {% if button.description %}
                     <div style="color:var(--text-muted); font-size:13px;">{{ button.description }}</div>
                     {% endif %}
                 </div>
-                <div style="display:flex; gap:8px; align-items:center; flex-shrink:0;">
-                    <span class="badge badge-green" id="count-{{ button.id }}">
-                        <i class="fa-solid fa-cursor" style="margin-right:4px;"></i>
+                <div style="display:flex; gap:8px; align-items:center; flex-shrink:0; flex-wrap:wrap;">
+                    <span class="badge badge-indigo" id="count-{{ button.id }}">
+                        <i class="fa-solid fa-hand-pointer" style="margin-right:4px;"></i>
                         {{ button.click_count }} click{{ button.click_count|pluralize }}
                     </span>
-                    <button class="btn btn-ghost btn-sm" style="color:var(--yellow); border-color:rgba(245,158,11,0.3);"
+                    <button class="btn btn-sm" style="color:var(--salmon); background:var(--salmon-light); border:1px solid rgba(226,149,120,0.30);"
                         onclick="testBtnTrack('{{ button.id }}', this)" title="Send a real test click to verify tracking works">
                         <i class="fa-solid fa-flask"></i> Test
                     </button>
@@ -131,43 +133,45 @@
             </div>
 
             <!-- Integration Code -->
-            <div style="margin-top:4px;">
-                <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+            <div>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
                     <i class="fa-solid fa-code" style="color:var(--accent);"></i>
                     <span style="font-size:13px; font-weight:700; color:var(--text);">Integration Code</span>
-                    <span style="font-size:11px; color:var(--text-dim); margin-left:2px;">— 2 steps to embed on your site</span>
+                    <span style="font-size:11px; color:var(--text-dim);">— 2 steps to embed on your site</span>
                 </div>
 
-                <!-- Step 1: HTML Button -->
-                <div style="background:var(--bg); border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:10px;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--surface2); border-bottom:1px solid var(--border);">
+                <!-- Step 1 -->
+                <div style="background:#0d1117; border:1px solid #30363d; border-radius:10px; overflow:hidden; margin-bottom:8px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#161b22; border-bottom:1px solid #30363d;">
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="background:var(--accent); color:#fff; font-size:10px; font-weight:800; padding:2px 7px; border-radius:20px; letter-spacing:0.3px;">STEP 1</span>
-                            <span style="font-size:12px; font-weight:600; color:var(--text-muted);">Add this HTML attribute to your button</span>
+                            <span style="background:var(--accent); color:#fff; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px;">STEP 1</span>
+                            <span style="font-size:12px; color:#8b949e;">Add this HTML attribute to your button</span>
                         </div>
-                        <button class="copy-btn btn btn-ghost btn-sm" data-target="html-{{ button.id }}" onclick="copySnippet(this)" style="gap:6px; min-width:80px;">
+                        <button class="copy-btn" data-target="html-{{ button.id }}" onclick="copySnippet(this)"
+                            style="background:rgba(255,255,255,0.08); border:1px solid #30363d; color:#c9d1d9; border-radius:6px; padding:4px 10px; font-size:12px; font-weight:600; cursor:pointer; font-family:Inter,sans-serif; display:flex; align-items:center; gap:5px;">
                             <i class="fa-regular fa-copy"></i> Copy
                         </button>
                     </div>
                     <textarea id="html-{{ button.id }}" class="code-area" readonly rows="1" onclick="this.select()"
-                        style="min-height:unset; height:46px; resize:none; padding:12px 16px; line-height:1.5;"><button class="track-event" data-tracker-id="{{ button.id }}">Your Button Text</button></textarea>
+                        style="min-height:unset; height:44px; resize:none; padding:11px 16px; line-height:1.5;"><button class="track-event" data-tracker-id="{{ button.id }}">Your Button Text</button></textarea>
                 </div>
 
-                <!-- Step 2: Script -->
-                <div style="background:var(--bg); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--surface2); border-bottom:1px solid var(--border);">
+                <!-- Step 2 -->
+                <div style="background:#0d1117; border:1px solid #30363d; border-radius:10px; overflow:hidden;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#161b22; border-bottom:1px solid #30363d;">
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="background:var(--green); color:#fff; font-size:10px; font-weight:800; padding:2px 7px; border-radius:20px; letter-spacing:0.3px;">STEP 2</span>
-                            <span style="font-size:12px; font-weight:600; color:var(--text-muted);">
-                                Paste once before <code style="background:var(--surface);padding:1px 5px;border-radius:4px;font-size:11px;">&lt;/body&gt;</code>
+                            <span style="background:var(--teal); color:var(--accent); font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px;">STEP 2</span>
+                            <span style="font-size:12px; color:#8b949e;">
+                                Paste once before <code style="background:#21262d;padding:1px 5px;border-radius:3px;font-size:11px;">&lt;/body&gt;</code>
                             </span>
                         </div>
-                        <button class="copy-btn btn btn-ghost btn-sm" data-target="js-{{ button.id }}" onclick="copySnippet(this)" style="gap:6px; min-width:80px;">
+                        <button class="copy-btn" data-target="js-{{ button.id }}" onclick="copySnippet(this)"
+                            style="background:rgba(255,255,255,0.08); border:1px solid #30363d; color:#c9d1d9; border-radius:6px; padding:4px 10px; font-size:12px; font-weight:600; cursor:pointer; font-family:Inter,sans-serif; display:flex; align-items:center; gap:5px;">
                             <i class="fa-regular fa-copy"></i> Copy
                         </button>
                     </div>
                     <textarea id="js-{{ button.id }}" class="code-area" readonly onclick="this.select()"
-                        style="resize:none; padding:14px 16px; height:160px;"><script>
+                        style="resize:none; padding:14px 16px; height:155px;"><script>
 (function() {
   var BASE = 'https://{{ request.get_host }}';
   document.querySelectorAll('.track-event').forEach(function(btn) {
@@ -185,10 +189,9 @@
                 </div>
 
                 <div style="display:flex; align-items:center; gap:6px; margin-top:8px;">
-                    <i class="fa-solid fa-lightbulb" style="color:var(--yellow); font-size:11px;"></i>
-                    <span style="font-size:11px; color:var(--text-dim);">
-                        Step 2 only needs to be pasted once per page — it handles all <code style="font-size:10px;">track-event</code> buttons.
-                        IP &amp; location are detected server-side automatically.
+                    <i class="fa-solid fa-lightbulb" style="color:var(--salmon); font-size:11px;"></i>
+                    <span style="font-size:11px; color:var(--text-muted);">
+                        Step 2 only needs to be pasted once per page — it handles all <code style="font-size:10px; background:var(--surface); padding:1px 4px; border-radius:3px; border:1px solid var(--border);">track-event</code> buttons. IP &amp; location are detected server-side automatically.
                     </span>
                 </div>
             </div>
@@ -211,42 +214,43 @@
 <div class="card">
     <div class="card-header">
         <div>
-            <div class="card-title">
-                <i class="fa-solid fa-globe" style="color:#a855f7; margin-right:6px;"></i>
+            <div class="card-title" style="display:flex; align-items:center; gap:8px;">
+                <i class="fa-solid fa-globe" style="color:var(--salmon);"></i>
                 Site Trackers
-                <span style="margin-left:8px; font-size:11px; font-weight:600; background:rgba(168,85,247,0.15); color:#a855f7; padding:2px 8px; border-radius:20px; letter-spacing:0.3px;">NEW</span>
+                <span style="font-size:10px; font-weight:700; background:var(--peach); color:#7a3f28; padding:2px 8px; border-radius:20px; letter-spacing:0.3px;">AUTO DETECT</span>
             </div>
-            <div class="card-subtitle">Embed one script in your header/footer — automatically records every click with element details, page, IP &amp; location</div>
+            <div class="card-subtitle">Embed one script — automatically records every click with element details, page, IP &amp; location</div>
         </div>
-        <button class="btn btn-sm" style="background:rgba(168,85,247,0.15); color:#a855f7; border:1px solid rgba(168,85,247,0.3);"
-            onclick="document.getElementById('createSiteModal').classList.add('open')">
+        <button class="btn btn-salmon btn-sm" onclick="document.getElementById('createSiteModal').classList.add('open')">
             <i class="fa-solid fa-plus"></i> Add Site Tracker
         </button>
     </div>
 
     {% if site_trackers %}
-    <div style="display:flex; flex-direction:column; gap:16px;">
+    <div style="display:flex; flex-direction:column; gap:14px;">
         {% for st in site_trackers %}
         <div style="
-            background:var(--surface2); border:1px solid rgba(168,85,247,0.25);
-            border-radius:10px; padding:20px; transition:border-color 0.2s;
-        " onmouseover="this.style.borderColor='#a855f7'" onmouseout="this.style.borderColor='rgba(168,85,247,0.25)'">
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+            background:var(--surface2); border:1px solid rgba(226,149,120,0.30);
+            border-radius:10px; padding:18px 20px; transition:border-color 0.2s, box-shadow 0.2s;
+        " onmouseover="this.style.borderColor='var(--salmon)'; this.style.boxShadow='0 2px 12px rgba(226,149,120,0.12)'"
+           onmouseout="this.style.borderColor='rgba(226,149,120,0.30)'; this.style.boxShadow='none'">
+
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
                 <div>
-                    <div style="font-weight:700; font-size:15px; color:var(--text); margin-bottom:4px; display:flex; align-items:center; gap:8px;">
-                        <i class="fa-solid fa-globe" style="color:#a855f7; font-size:13px;"></i>
+                    <div style="font-weight:700; font-size:15px; color:var(--text); margin-bottom:3px; display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-globe" style="color:var(--salmon); font-size:13px;"></i>
                         {{ st.name }}
                     </div>
                     {% if st.description %}
                     <div style="color:var(--text-muted); font-size:13px;">{{ st.description }}</div>
                     {% endif %}
                 </div>
-                <div style="display:flex; gap:8px; align-items:center; flex-shrink:0;">
-                    <span class="badge" style="background:rgba(168,85,247,0.15); color:#a855f7;" id="site-count-{{ st.id }}">
+                <div style="display:flex; gap:8px; align-items:center; flex-shrink:0; flex-wrap:wrap;">
+                    <span class="badge badge-salmon" id="site-count-{{ st.id }}">
                         <i class="fa-solid fa-hand-pointer" style="margin-right:4px;"></i>
                         {{ st.click_count }} click{{ st.click_count|pluralize }}
                     </span>
-                    <button class="btn btn-ghost btn-sm" style="color:var(--yellow); border-color:rgba(245,158,11,0.3);"
+                    <button class="btn btn-sm" style="color:var(--salmon); background:var(--salmon-light); border:1px solid rgba(226,149,120,0.30);"
                         onclick="testSiteTrack('{{ st.id }}', this)" title="Send a test click to verify tracking works">
                         <i class="fa-solid fa-flask"></i> Test
                     </button>
@@ -263,23 +267,24 @@
             <!-- Embed Script -->
             <div>
                 <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-                    <i class="fa-solid fa-code" style="color:#a855f7;"></i>
+                    <i class="fa-solid fa-code" style="color:var(--salmon);"></i>
                     <span style="font-size:13px; font-weight:700; color:var(--text);">Embed Script</span>
-                    <span style="font-size:11px; color:var(--text-dim);">— paste inside your <code style="font-size:10px;">&lt;head&gt;</code> or just before <code style="font-size:10px;">&lt;/body&gt;</code></span>
+                    <span style="font-size:11px; color:var(--text-dim);">— paste inside <code style="font-size:10px;">&lt;head&gt;</code> or before <code style="font-size:10px;">&lt;/body&gt;</code></span>
                 </div>
 
-                <div style="background:var(--bg); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--surface2); border-bottom:1px solid var(--border);">
+                <div style="background:#0d1117; border:1px solid #30363d; border-radius:10px; overflow:hidden;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#161b22; border-bottom:1px solid #30363d;">
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="background:#a855f7; color:#fff; font-size:10px; font-weight:800; padding:2px 7px; border-radius:20px; letter-spacing:0.3px;">ONE SCRIPT</span>
-                            <span style="font-size:12px; color:var(--text-muted);">Records every click — no HTML changes needed</span>
+                            <span style="background:var(--salmon); color:#fff; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px;">ONE SCRIPT</span>
+                            <span style="font-size:12px; color:#8b949e;">Records every click — no HTML changes needed</span>
                         </div>
-                        <button class="copy-btn btn btn-ghost btn-sm" data-target="site-js-{{ st.id }}" onclick="copySnippet(this)" style="gap:6px; min-width:80px;">
+                        <button class="copy-btn" data-target="site-js-{{ st.id }}" onclick="copySnippet(this)"
+                            style="background:rgba(255,255,255,0.08); border:1px solid #30363d; color:#c9d1d9; border-radius:6px; padding:4px 10px; font-size:12px; font-weight:600; cursor:pointer; font-family:Inter,sans-serif; display:flex; align-items:center; gap:5px;">
                             <i class="fa-regular fa-copy"></i> Copy
                         </button>
                     </div>
                     <textarea id="site-js-{{ st.id }}" class="code-area" readonly onclick="this.select()"
-                        style="resize:none; padding:14px 16px; height:310px;"><script>
+                        style="resize:none; padding:14px 16px; height:305px;"><script>
 /* ClickTrack Site Tracker */
 (function() {
   var E = 'https://{{ request.get_host }}/api/autotrack/{{ st.id }}/';
@@ -307,10 +312,9 @@
     });
 
     /*
-     * IMPORTANT: No Content-Type header = browser sends text/plain
-     * text/plain is a "simple" CORS request — no preflight OPTIONS needed.
-     * This works cross-origin on any site without extra server config.
-     * keepalive:true ensures the request completes even during page navigation.
+     * No Content-Type header = browser sends text/plain
+     * text/plain is a "simple" CORS request — no preflight needed.
+     * keepalive:true ensures request completes even during page navigation.
      */
     fetch(E, { method: 'POST', keepalive: true, body: body }).catch(function(){});
   });
@@ -318,13 +322,11 @@
 </script></textarea>
                 </div>
 
-                <div style="display:flex; align-items:flex-start; gap:6px; margin-top:10px; padding:10px 14px; background:rgba(168,85,247,0.06); border:1px solid rgba(168,85,247,0.15); border-radius:8px;">
-                    <i class="fa-solid fa-circle-info" style="color:#a855f7; font-size:12px; margin-top:2px; flex-shrink:0;"></i>
+                <div style="display:flex; align-items:flex-start; gap:8px; margin-top:10px; padding:11px 14px; background:rgba(255,221,210,0.30); border:1px solid rgba(226,149,120,0.25); border-radius:8px;">
+                    <i class="fa-solid fa-circle-info" style="color:var(--salmon); font-size:12px; margin-top:2px; flex-shrink:0;"></i>
                     <span style="font-size:12px; color:var(--text-muted); line-height:1.6;">
                         <strong style="color:var(--text);">How it works:</strong>
-                        The script listens for every click on your page. When a visitor clicks anything — a button, link, image, or nav item — it automatically records the
-                        <strong>element type</strong>, <strong>button text</strong>, <strong>page URL</strong>, <strong>referrer</strong>,
-                        and the visitor's <strong>IP &amp; location</strong> (detected server-side). No HTML changes needed.
+                        Listens for every click — button, link, image, or nav item — and records the element type, text, page URL, referrer, and visitor IP &amp; location (detected server-side).
                     </span>
                 </div>
             </div>
@@ -333,14 +335,12 @@
     </div>
     {% else %}
     <div class="empty-state">
-        <div class="empty-icon" style="color:#a855f7;"><i class="fa-solid fa-globe"></i></div>
+        <div class="empty-icon" style="background:var(--salmon-light); color:var(--salmon);"><i class="fa-solid fa-globe"></i></div>
         <div class="empty-title">No site trackers yet</div>
         <div class="empty-desc">
-            Don't have access to individual buttons? Paste one script in your header or footer and ClickTrack automatically
-            records every click — which element, which page, from where.
+            Don't have access to individual buttons? Paste one script in your header or footer and ClickTrack automatically records every click.
         </div>
-        <button class="btn btn-sm" style="margin-top:20px; background:rgba(168,85,247,0.15); color:#a855f7; border:1px solid rgba(168,85,247,0.3);"
-            onclick="document.getElementById('createSiteModal').classList.add('open')">
+        <button class="btn btn-salmon" style="margin-top:20px;" onclick="document.getElementById('createSiteModal').classList.add('open')">
             <i class="fa-solid fa-plus"></i> Add Site Tracker
         </button>
     </div>
@@ -360,8 +360,8 @@
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
-        <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">
-            Add a <code style="font-size:12px;">class="track-event"</code> attribute to a specific button, then embed the provided script.
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px; line-height:1.6;">
+            Add a <code style="font-size:12px; background:var(--surface2); padding:1px 5px; border-radius:4px; border:1px solid var(--border);">class="track-event"</code> attribute to a specific button, then embed the provided script.
         </p>
         <form method="POST">
             {% csrf_token %}
@@ -391,13 +391,13 @@
     <div class="modal" style="max-width:480px;">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
             <div class="modal-title" style="margin-bottom:0;">
-                <i class="fa-solid fa-globe" style="color:#a855f7;margin-right:8px;"></i>New Site Tracker
+                <i class="fa-solid fa-globe" style="color:var(--salmon);margin-right:8px;"></i>New Site Tracker
             </div>
             <button class="btn btn-ghost btn-icon btn-sm" onclick="document.getElementById('createSiteModal').classList.remove('open')">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
-        <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px; line-height:1.6;">
             Paste one script anywhere on your page. It will automatically detect and record every click — no changes to individual elements needed.
         </p>
         <form method="POST">
@@ -417,7 +417,7 @@
             </div>
             <div style="display:flex; gap:10px; justify-content:flex-end;">
                 <button type="button" class="btn btn-ghost" onclick="document.getElementById('createSiteModal').classList.remove('open')">Cancel</button>
-                <button type="submit" class="btn btn-sm" style="background:#a855f7; color:#fff;">
+                <button type="submit" class="btn btn-salmon">
                     <i class="fa-solid fa-plus"></i> Create Site Tracker
                 </button>
             </div>
@@ -428,18 +428,13 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<style>
-.stat-icon.purple { background: rgba(168,85,247,0.15); color: #a855f7; }
-</style>
 <script>
-/* ── Close modals on backdrop click ── */
 ['createBtnModal','createSiteModal'].forEach(function(id) {
     document.getElementById(id).addEventListener('click', function(e) {
         if (e.target === this) this.classList.remove('open');
     });
 });
 
-/* ── Copy snippet ── */
 function copySnippet(btn) {
     const targetId = btn.getAttribute('data-target');
     const textarea = document.getElementById(targetId);
@@ -450,9 +445,8 @@ function copySnippet(btn) {
         btn.innerHTML = ok
             ? '<i class="fa-solid fa-check"></i> Copied!'
             : '<i class="fa-solid fa-xmark"></i> Failed';
-        btn.style.color = ok ? 'var(--green)' : 'var(--red)';
-        btn.style.borderColor = ok ? 'var(--green)' : 'var(--red)';
-        setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; btn.style.borderColor = ''; }, 2000);
+        btn.style.color = ok ? '#58a6ff' : '#f85149';
+        setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 2000);
     };
 
     if (navigator.clipboard && window.isSecureContext) {
@@ -463,7 +457,6 @@ function copySnippet(btn) {
     }
 }
 
-/* ── Live toast helper ── */
 function showToast(msg, type) {
     const icons = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info' };
     const stack = document.getElementById('toastStack') || (() => {
@@ -481,7 +474,6 @@ function showToast(msg, type) {
     setTimeout(() => { t.style.transition='opacity .4s'; t.style.opacity='0'; setTimeout(()=>t.remove(),400); }, 4000);
 }
 
-/* ── Generic test helper ── */
 async function doTestFetch(url, body, badgeId, badgeTemplate) {
     const res = await fetch(url, {
         method: 'POST',
@@ -490,7 +482,7 @@ async function doTestFetch(url, body, badgeId, badgeTemplate) {
     });
     const data = await res.json();
     if (res.ok && data.status === 'success') {
-        showToast('✅ Test click recorded! View Analytics to see it.', 'success');
+        showToast('Test click recorded! View Analytics to see it.', 'success');
         const badge = document.getElementById(badgeId);
         if (badge) {
             const m = badge.textContent.trim().match(/^(\d+)/);
@@ -500,11 +492,10 @@ async function doTestFetch(url, body, badgeId, badgeTemplate) {
             }
         }
     } else {
-        showToast(`❌ Tracking failed: ${data.message || res.status}`, 'error');
+        showToast(`Tracking failed: ${data.message || res.status}`, 'error');
     }
 }
 
-/* ── Test Button Tracker ── */
 async function testBtnTrack(trackerId, btn) {
     const orig = btn.innerHTML;
     btn.disabled = true;
@@ -514,17 +505,16 @@ async function testBtnTrack(trackerId, btn) {
             `/api/track/${trackerId}/`,
             { page_url: window.location.href + ' (test from dashboard)', referrer: '' },
             'count-' + trackerId,
-            n => `<i class="fa-solid fa-cursor" style="margin-right:4px;"></i>${n} click${n !== 1 ? 's' : ''}`
+            n => `<i class="fa-solid fa-hand-pointer" style="margin-right:4px;"></i>${n} click${n !== 1 ? 's' : ''}`
         );
     } catch(err) {
-        showToast(`❌ Network error: ${err.message}`, 'error');
+        showToast(`Network error: ${err.message}`, 'error');
     } finally {
         btn.disabled = false;
         btn.innerHTML = orig;
     }
 }
 
-/* ── Test Site Tracker ── */
 async function testSiteTrack(trackerId, btn) {
     const orig = btn.innerHTML;
     btn.disabled = true;
@@ -545,7 +535,7 @@ async function testSiteTrack(trackerId, btn) {
             n => `<i class="fa-solid fa-hand-pointer" style="margin-right:4px;"></i>${n} click${n !== 1 ? 's' : ''}`
         );
     } catch(err) {
-        showToast(`❌ Network error: ${err.message}`, 'error');
+        showToast(`Network error: ${err.message}`, 'error');
     } finally {
         btn.disabled = false;
         btn.innerHTML = orig;

@@ -22,14 +22,14 @@
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon green"><i class="fa-solid fa-toggle-on"></i></div>
+        <div class="stat-icon teal"><i class="fa-solid fa-toggle-on"></i></div>
         <div>
             <div class="stat-value">{{ total_buttons }}</div>
             <div class="stat-label">Active Trackers</div>
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon yellow"><i class="fa-solid fa-cursor"></i></div>
+        <div class="stat-icon yellow"><i class="fa-solid fa-hand-pointer"></i></div>
         <div>
             <div class="stat-value">{{ total_clicks }}</div>
             <div class="stat-label">Total Clicks</div>
@@ -50,14 +50,16 @@
     </div>
 
     {% if projects %}
-    <div style="display:flex; flex-direction:column; gap:12px;">
+    <div style="display:flex; flex-direction:column; gap:10px;">
         {% for p in projects %}
         <div style="
             display:flex; align-items:center; gap:16px;
             background:var(--surface2); border:1px solid var(--border);
-            border-radius:10px; padding:18px 20px;
-            transition: border-color 0.2s;
-        " onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+            border-radius:10px; padding:16px 20px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            cursor: default;
+        " onmouseover="this.style.borderColor='var(--accent)'; this.style.boxShadow='0 2px 12px rgba(0,109,119,0.10)'"
+           onmouseout="this.style.borderColor='var(--border)'; this.style.boxShadow='none'">
             <div style="
                 width:44px; height:44px; border-radius:10px;
                 background:var(--accent-light); color:var(--accent);
@@ -68,7 +70,7 @@
             </div>
             <div style="flex:1; min-width:0;">
                 <div style="font-weight:700; font-size:15px; color:var(--text); margin-bottom:3px;">{{ p.name }}</div>
-                <div style="color:var(--text-muted); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                <div style="color:var(--text-muted); font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                     {{ p.description|default:"No description" }}
                 </div>
             </div>
@@ -78,7 +80,7 @@
                     {{ p.button_count }} tracker{{ p.button_count|pluralize }}
                 </span>
                 <span class="badge badge-green">
-                    <i class="fa-solid fa-cursor" style="margin-right:4px;"></i>
+                    <i class="fa-solid fa-hand-pointer" style="margin-right:4px;"></i>
                     {{ p.click_count }} click{{ p.click_count|pluralize }}
                 </span>
             </div>
@@ -149,11 +151,9 @@
 
 {% block extra_scripts %}
 <script>
-// Close modal on backdrop click
 document.getElementById('createProjectModal').addEventListener('click', function(e) {
     if (e.target === this) this.classList.remove('open');
 });
-// Open modal if there was a form error (name was empty)
 {% if request.method == 'POST' %}
 document.getElementById('createProjectModal').classList.add('open');
 {% endif %}

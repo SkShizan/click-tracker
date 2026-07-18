@@ -25,27 +25,28 @@
 {% block content %}
 
 <!-- Tracker header -->
-<div class="card" style="margin-bottom:24px;">
+<div class="card" style="margin-bottom:22px;">
     <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap;">
         <div style="display:flex; align-items:flex-start; gap:16px;">
             <div style="
                 width:52px; height:52px; border-radius:12px;
-                background:var(--green-light); color:var(--green);
+                background:var(--accent-light); color:var(--accent);
                 display:flex; align-items:center; justify-content:center;
                 font-size:22px; flex-shrink:0;
             "><i class="fa-solid fa-toggle-on"></i></div>
             <div>
-                <h1 style="font-size:22px; font-weight:800; color:var(--text); margin-bottom:4px;">{{ tracker.title }}</h1>
+                <h1 style="font-size:21px; font-weight:800; color:var(--text); margin-bottom:4px;">{{ tracker.title }}</h1>
                 {% if tracker.description %}
-                <p style="color:var(--text-muted); font-size:13.5px; margin-bottom:6px;">{{ tracker.description }}</p>
+                <p style="color:var(--text-muted); font-size:13px; margin-bottom:6px;">{{ tracker.description }}</p>
                 {% endif %}
                 <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                    <span style="font-size:12px; color:var(--text-dim);">Tracker ID:</span>
+                    <span style="font-size:12px; color:var(--text-muted);">Tracker ID:</span>
                     <code style="
                         background:var(--surface2); border:1px solid var(--border);
                         padding:3px 8px; border-radius:5px;
                         font-size:11px; color:var(--accent); font-family:'Courier New', monospace;
-                        cursor:pointer;" onclick="navigator.clipboard.writeText('{{ tracker.id }}');this.textContent='Copied!';setTimeout(()=>this.textContent='{{ tracker.id }}',1500);"
+                        cursor:pointer;"
+                        onclick="navigator.clipboard.writeText('{{ tracker.id }}');this.textContent='Copied!';setTimeout(()=>this.textContent='{{ tracker.id }}',1500);"
                         title="Click to copy">{{ tracker.id }}</code>
                 </div>
             </div>
@@ -57,7 +58,7 @@
     <hr class="divider">
     <div class="stats-grid" style="margin-bottom:0;">
         <div class="stat-card">
-            <div class="stat-icon yellow"><i class="fa-solid fa-cursor"></i></div>
+            <div class="stat-icon yellow"><i class="fa-solid fa-hand-pointer"></i></div>
             <div>
                 <div class="stat-value">{{ total }}</div>
                 <div class="stat-label">Total Clicks</div>
@@ -71,7 +72,7 @@
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon green"><i class="fa-solid fa-fingerprint"></i></div>
+            <div class="stat-icon teal"><i class="fa-solid fa-fingerprint"></i></div>
             <div>
                 <div class="stat-value">{{ unique_ips }}</div>
                 <div class="stat-label">Unique IPs</div>
@@ -88,8 +89,8 @@
             <div class="card-subtitle">{{ total }} recorded event{{ total|pluralize }}</div>
         </div>
         {% if clicks %}
-        <span class="badge badge-green">
-            <i class="fa-solid fa-circle" style="font-size:8px; margin-right:5px;"></i>Live
+        <span class="badge badge-indigo">
+            <i class="fa-solid fa-circle" style="font-size:7px; margin-right:5px; color:var(--accent);"></i>Live
         </span>
         {% endif %}
     </div>
@@ -109,47 +110,48 @@
             <tbody>
                 {% for click in clicks %}
                 <tr>
-                    <td style="white-space:nowrap; color:var(--text-muted); font-size:13px;">
+                    <td style="white-space:nowrap; font-size:13px;">
                         <i class="fa-regular fa-clock" style="margin-right:5px; color:var(--text-dim);"></i>
-                        {{ click.clicked_at|date:"M d, Y" }}
-                        <span style="color:var(--text-dim);"> {{ click.clicked_at|date:"H:i" }}</span>
+                        <span style="color:var(--text);">{{ click.clicked_at|date:"M d, Y" }}</span>
+                        <span style="color:var(--text-muted);"> {{ click.clicked_at|date:"H:i" }}</span>
                     </td>
                     <td>
                         {% if click.city or click.country %}
                         <div style="display:flex; align-items:center; gap:6px;">
                             <i class="fa-solid fa-location-dot" style="color:var(--accent); font-size:12px;"></i>
-                            <span>{{ click.city|default:"" }}{% if click.city and click.country %}, {% endif %}{{ click.country|default:"Unknown" }}</span>
+                            <span style="font-size:13px;">{{ click.city|default:"" }}{% if click.city and click.country %}, {% endif %}{{ click.country|default:"Unknown" }}</span>
                         </div>
                         {% else %}
-                        <span style="color:var(--text-dim); font-style:italic;">Local / Unknown</span>
+                        <span style="color:var(--text-dim); font-style:italic; font-size:12px;">Local / Unknown</span>
                         {% endif %}
                     </td>
                     <td>
                         <code style="
                             font-family:'Courier New', monospace; font-size:12px;
-                            background:var(--surface2); padding:3px 7px;
-                            border-radius:4px; color:var(--text-muted);
+                            background:var(--surface2); padding:3px 8px;
+                            border-radius:5px; color:var(--text-muted);
+                            border:1px solid var(--border);
                         ">{{ click.ip_address|default:"—" }}</code>
                     </td>
                     <td style="max-width:220px;">
                         {% if click.page_url %}
                         {% with url_lower=click.page_url|lower %}
                         {% if "google.com" in url_lower %}
-                            <span class="badge" style="background:rgba(66,133,244,0.12);color:#4285F4;">
+                            <span class="badge" style="background:rgba(66,133,244,0.10);color:#2a6ad4;">
                                 <i class="fa-brands fa-google" style="margin-right:4px;"></i>Google
                             </span>
                         {% elif "bing.com" in url_lower %}
-                            <span class="badge" style="background:rgba(0,137,212,0.12);color:#0089D4;">Bing</span>
+                            <span class="badge" style="background:rgba(0,137,212,0.10);color:#0068a0;">Bing</span>
                         {% elif "facebook.com" in url_lower %}
-                            <span class="badge" style="background:rgba(24,119,242,0.12);color:#1877F2;">
+                            <span class="badge" style="background:rgba(24,119,242,0.10);color:#1250a0;">
                                 <i class="fa-brands fa-facebook" style="margin-right:4px;"></i>Facebook
                             </span>
                         {% elif "linkedin.com" in url_lower %}
-                            <span class="badge" style="background:rgba(10,102,194,0.12);color:#0A66C2;">
+                            <span class="badge" style="background:rgba(10,102,194,0.10);color:#0a4d8c;">
                                 <i class="fa-brands fa-linkedin" style="margin-right:4px;"></i>LinkedIn
                             </span>
                         {% elif "twitter.com" in url_lower or "x.com" in url_lower %}
-                            <span class="badge" style="background:rgba(29,161,242,0.12);color:#1DA1F2;">
+                            <span class="badge" style="background:rgba(0,0,0,0.06);color:#333;">
                                 <i class="fa-brands fa-x-twitter" style="margin-right:4px;"></i>Twitter/X
                             </span>
                         {% else %}
@@ -167,7 +169,7 @@
                         <span style="
                             display:block; overflow:hidden; text-overflow:ellipsis;
                             white-space:nowrap; color:var(--text-muted); font-size:12px;
-                        " title="{{ click.user_agent }}">{{ click.user_agent|truncatechars:35 }}</span>
+                        " title="{{ click.user_agent }}">{{ click.user_agent|truncatechars:35|default:"—" }}</span>
                     </td>
                 </tr>
                 {% endfor %}
@@ -176,7 +178,7 @@
     </div>
     {% else %}
     <div class="empty-state">
-        <div class="empty-icon"><i class="fa-solid fa-cursor"></i></div>
+        <div class="empty-icon"><i class="fa-solid fa-hand-pointer"></i></div>
         <div class="empty-title">No clicks yet</div>
         <div class="empty-desc">
             Embed the integration code in your website. Once someone clicks the button, the data will appear here.
