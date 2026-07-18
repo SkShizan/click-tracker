@@ -21,10 +21,12 @@ urlpatterns = [
     # Button trackers
     path('dashboard/button/<uuid:tracker_id>/', tracker_views.button_analytics, name='button_analytics'),
     path('dashboard/button/<uuid:tracker_id>/delete/', tracker_views.delete_button, name='delete_button'),
+    path('dashboard/button/<uuid:tracker_id>/ip/', tracker_views.button_ip_detail, name='button_ip_detail'),
 
     # Site trackers
     path('dashboard/site/<uuid:tracker_id>/', tracker_views.site_analytics, name='site_analytics'),
     path('dashboard/site/<uuid:tracker_id>/delete/', tracker_views.delete_site_tracker, name='delete_site_tracker'),
+    path('dashboard/site/<uuid:tracker_id>/ip/', tracker_views.site_ip_detail, name='site_ip_detail'),
 
     # API
     path('api/track/<uuid:tracker_id>/', tracker_views.track_click, name='track_click'),

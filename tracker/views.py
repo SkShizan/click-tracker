@@ -7,7 +7,7 @@ from django.contrib.auth import login
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
-from django.db.models import Count
+from django.db.models import Count, Min, Max
 from .models import Project, ButtonTracker, ClickEvent, SiteTracker, PageClickEvent
 
 
@@ -176,6 +176,40 @@ def delete_site_tracker(request, tracker_id):
     return redirect('project_dashboard', project_id=project_id)
 
 
+# ── Helpers: IP grouping ──────────────────────────────────────────────────────
+
+def build_ip_groups(clicks):
+    """Return list of dicts, one per unique IP, with count/location/ua/times."""
+    groups = list(
+        clicks.exclude(ip_address=None).exclude(ip_address='')
+        .values('ip_address')
+        .annotate(
+            count=Count('id'),
+            first_seen=Min('clicked_at'),
+            last_seen=Max('clicked_at'),
+        )
+        .order_by('-count')
+    )
+    if not groups:
+        return groups
+
+    ips = [g['ip_address'] for g in groups]
+    # One sample row per IP for city/country/user_agent
+    ip_meta = {}
+    for row in clicks.filter(ip_address__in=ips).values('ip_address', 'city', 'country', 'user_agent'):
+        ip = row['ip_address']
+        if ip not in ip_meta:
+            ip_meta[ip] = {'city': row['city'], 'country': row['country'], 'user_agent': row['user_agent']}
+
+    for g in groups:
+        meta = ip_meta.get(g['ip_address'], {})
+        g['city'] = meta.get('city', '')
+        g['country'] = meta.get('country', '')
+        g['user_agent'] = meta.get('user_agent', '')
+
+    return groups
+
+
 # ── LEVEL 3a: Button Analytics ───────────────────────────────────────────────
 
 @login_required
@@ -186,14 +220,42 @@ def button_analytics(request, tracker_id):
     total = clicks.count()
     unique_countries = clicks.exclude(country='').values('country').distinct().count()
     unique_ips = clicks.exclude(ip_address=None).values('ip_address').distinct().count()
+    ip_groups = build_ip_groups(clicks)
 
     return render(request, 'tracker/button_analytics.html', {
         'tracker': tracker,
         'project': tracker.project,
-        'clicks': clicks,
         'total': total,
         'unique_countries': unique_countries,
         'unique_ips': unique_ips,
+        'ip_groups': ip_groups,
+    })
+
+
+# ── LEVEL 3a-detail: Button IP Detail ────────────────────────────────────────
+
+@login_required
+def button_ip_detail(request, tracker_id):
+    tracker = get_object_or_404(ButtonTracker, id=tracker_id, project__user=request.user)
+    ip = request.GET.get('ip', '')
+    clicks = tracker.clicks.filter(ip_address=ip).order_by('-clicked_at')
+
+    sample = clicks.first()
+    location = ''
+    if sample:
+        if sample.city and sample.country:
+            location = f"{sample.city}, {sample.country}"
+        elif sample.country:
+            location = sample.country
+
+    return render(request, 'tracker/button_ip_detail.html', {
+        'tracker': tracker,
+        'project': tracker.project,
+        'ip': ip,
+        'clicks': clicks,
+        'location': location,
+        'user_agent': sample.user_agent if sample else '',
+        'total': clicks.count(),
     })
 
 
@@ -208,6 +270,7 @@ def site_analytics(request, tracker_id):
     unique_pages = clicks.exclude(page_url='').values('page_url').distinct().count()
     unique_countries = clicks.exclude(country='').values('country').distinct().count()
     unique_ips = clicks.exclude(ip_address=None).values('ip_address').distinct().count()
+    ip_groups = build_ip_groups(clicks)
 
     top_pages = (
         clicks.exclude(page_url='')
@@ -225,13 +288,40 @@ def site_analytics(request, tracker_id):
     return render(request, 'tracker/site_analytics.html', {
         'tracker': tracker,
         'project': tracker.project,
-        'clicks': clicks[:200],  # cap table at 200 rows
         'total': total,
         'unique_pages': unique_pages,
         'unique_countries': unique_countries,
         'unique_ips': unique_ips,
+        'ip_groups': ip_groups,
         'top_pages': top_pages,
         'top_elements': top_elements,
+    })
+
+
+# ── LEVEL 3b-detail: Site IP Detail ──────────────────────────────────────────
+
+@login_required
+def site_ip_detail(request, tracker_id):
+    tracker = get_object_or_404(SiteTracker, id=tracker_id, project__user=request.user)
+    ip = request.GET.get('ip', '')
+    clicks = tracker.clicks.filter(ip_address=ip).order_by('-clicked_at')
+
+    sample = clicks.first()
+    location = ''
+    if sample:
+        if sample.city and sample.country:
+            location = f"{sample.city}, {sample.country}"
+        elif sample.country:
+            location = sample.country
+
+    return render(request, 'tracker/site_ip_detail.html', {
+        'tracker': tracker,
+        'project': tracker.project,
+        'ip': ip,
+        'clicks': clicks,
+        'location': location,
+        'user_agent': sample.user_agent if sample else '',
+        'total': clicks.count(),
     })
 
 

@@ -56,120 +56,102 @@
         </a>
     </div>
     <hr class="divider">
-    <div class="stats-grid" style="margin-bottom:0;">
-        <div class="stat-card">
-            <div class="stat-icon yellow"><i class="fa-solid fa-hand-pointer"></i></div>
-            <div>
-                <div class="stat-value">{{ total }}</div>
-                <div class="stat-label">Total Clicks</div>
+    <!-- Stats -->
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px;">
+        <div class="stat-accent-card">
+            <div class="stat-accent-icon" style="background:rgba(226,149,120,0.15); color:var(--salmon);">
+                <i class="fa-solid fa-hand-pointer"></i>
             </div>
+            <div class="stat-accent-num">{{ total }}</div>
+            <div class="stat-accent-lbl">Total Clicks</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon indigo"><i class="fa-solid fa-globe"></i></div>
-            <div>
-                <div class="stat-value">{{ unique_countries }}</div>
-                <div class="stat-label">Countries</div>
+        <div class="stat-accent-card">
+            <div class="stat-accent-icon" style="background:var(--accent-light); color:var(--accent);">
+                <i class="fa-solid fa-globe"></i>
             </div>
+            <div class="stat-accent-num">{{ unique_countries }}</div>
+            <div class="stat-accent-lbl">Countries</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon teal"><i class="fa-solid fa-fingerprint"></i></div>
-            <div>
-                <div class="stat-value">{{ unique_ips }}</div>
-                <div class="stat-label">Unique IPs</div>
+        <div class="stat-accent-card">
+            <div class="stat-accent-icon" style="background:var(--teal-light); color:var(--accent);">
+                <i class="fa-solid fa-fingerprint"></i>
             </div>
+            <div class="stat-accent-num">{{ unique_ips }}</div>
+            <div class="stat-accent-lbl">Unique Visitors</div>
         </div>
     </div>
 </div>
 
-<!-- Click history table -->
+<!-- Visitor table -->
 <div class="card">
     <div class="card-header">
         <div>
-            <div class="card-title">Click History</div>
-            <div class="card-subtitle">{{ total }} recorded event{{ total|pluralize }}</div>
+            <div class="card-title"><i class="fa-solid fa-users" style="color:var(--accent); margin-right:8px;"></i>Visitor Sessions</div>
+            <div class="card-subtitle">
+                {% if ip_groups %}{{ ip_groups|length }} unique IP{{ ip_groups|length|pluralize }} · {{ total }} total click{{ total|pluralize }}{% else %}No clicks recorded yet{% endif %}
+            </div>
         </div>
-        {% if clicks %}
+        {% if ip_groups %}
         <span class="badge badge-indigo">
-            <i class="fa-solid fa-circle" style="font-size:7px; margin-right:5px; color:var(--accent);"></i>Live
+            <i class="fa-solid fa-circle" style="font-size:7px; margin-right:5px;"></i>Live
         </span>
         {% endif %}
     </div>
 
-    {% if clicks %}
+    {% if ip_groups %}
     <div class="table-wrap">
         <table>
             <thead>
                 <tr>
-                    <th>Date &amp; Time</th>
-                    <th>Location</th>
                     <th>IP Address</th>
-                    <th>Source URL</th>
-                    <th>Device / Browser</th>
+                    <th>Location</th>
+                    <th>Clicks</th>
+                    <th>First Seen</th>
+                    <th>Last Seen</th>
+                    <th>User Agent</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
-                {% for click in clicks %}
+                {% for g in ip_groups %}
                 <tr>
-                    <td style="white-space:nowrap; font-size:13px;">
-                        <i class="fa-regular fa-clock" style="margin-right:5px; color:var(--text-dim);"></i>
-                        <span style="color:var(--text);">{{ click.clicked_at|date:"M d, Y" }}</span>
-                        <span style="color:var(--text-muted);"> {{ click.clicked_at|date:"H:i" }}</span>
+                    <td>
+                        <code class="ip-code">{{ g.ip_address }}</code>
                     </td>
                     <td>
-                        {% if click.city or click.country %}
+                        {% if g.city or g.country %}
                         <div style="display:flex; align-items:center; gap:6px;">
-                            <i class="fa-solid fa-location-dot" style="color:var(--accent); font-size:12px;"></i>
-                            <span style="font-size:13px;">{{ click.city|default:"" }}{% if click.city and click.country %}, {% endif %}{{ click.country|default:"Unknown" }}</span>
+                            <i class="fa-solid fa-location-dot" style="color:var(--accent); font-size:11px; flex-shrink:0;"></i>
+                            <span style="font-size:13px;">{{ g.city|default:"" }}{% if g.city and g.country %}, {% endif %}{{ g.country|default:"" }}</span>
                         </div>
                         {% else %}
-                        <span style="color:var(--text-dim); font-style:italic; font-size:12px;">Local / Unknown</span>
+                        <span class="dim-text">—</span>
                         {% endif %}
                     </td>
                     <td>
-                        <code style="
-                            font-family:'Courier New', monospace; font-size:12px;
-                            background:var(--surface2); padding:3px 8px;
-                            border-radius:5px; color:var(--text-muted);
-                            border:1px solid var(--border);
-                        ">{{ click.ip_address|default:"—" }}</code>
+                        <span class="click-count-badge">{{ g.count }}</span>
                     </td>
-                    <td style="max-width:220px;">
-                        {% if click.page_url %}
-                        {% with url_lower=click.page_url|lower %}
-                        {% if "google.com" in url_lower %}
-                            <span class="badge" style="background:rgba(66,133,244,0.10);color:#2a6ad4;">
-                                <i class="fa-brands fa-google" style="margin-right:4px;"></i>Google
-                            </span>
-                        {% elif "bing.com" in url_lower %}
-                            <span class="badge" style="background:rgba(0,137,212,0.10);color:#0068a0;">Bing</span>
-                        {% elif "facebook.com" in url_lower %}
-                            <span class="badge" style="background:rgba(24,119,242,0.10);color:#1250a0;">
-                                <i class="fa-brands fa-facebook" style="margin-right:4px;"></i>Facebook
-                            </span>
-                        {% elif "linkedin.com" in url_lower %}
-                            <span class="badge" style="background:rgba(10,102,194,0.10);color:#0a4d8c;">
-                                <i class="fa-brands fa-linkedin" style="margin-right:4px;"></i>LinkedIn
-                            </span>
-                        {% elif "twitter.com" in url_lower or "x.com" in url_lower %}
-                            <span class="badge" style="background:rgba(0,0,0,0.06);color:#333;">
-                                <i class="fa-brands fa-x-twitter" style="margin-right:4px;"></i>Twitter/X
-                            </span>
-                        {% else %}
-                            <span style="
-                                display:block; overflow:hidden; text-overflow:ellipsis;
-                                white-space:nowrap; color:var(--text-muted); font-size:12px;
-                            " title="{{ click.page_url }}">{{ click.page_url|truncatechars:50 }}</span>
-                        {% endif %}
-                        {% endwith %}
-                        {% else %}
-                        <span style="color:var(--text-dim);">—</span>
-                        {% endif %}
+                    <td>
+                        <div class="time-cell">
+                            <span class="time-date">{{ g.first_seen|date:"M d, Y" }}</span>
+                            <span class="time-hour">{{ g.first_seen|date:"H:i" }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="time-cell">
+                            <span class="time-date">{{ g.last_seen|date:"M d, Y" }}</span>
+                            <span class="time-hour">{{ g.last_seen|date:"H:i" }}</span>
+                        </div>
                     </td>
                     <td style="max-width:180px;">
-                        <span style="
-                            display:block; overflow:hidden; text-overflow:ellipsis;
-                            white-space:nowrap; color:var(--text-muted); font-size:12px;
-                        " title="{{ click.user_agent }}">{{ click.user_agent|truncatechars:35|default:"—" }}</span>
+                        <span style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-muted); font-size:12px;" title="{{ g.user_agent }}">
+                            {{ g.user_agent|truncatechars:38|default:"—" }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{% url 'button_ip_detail' tracker.id %}?ip={{ g.ip_address }}" class="btn btn-ghost btn-sm" style="white-space:nowrap;">
+                            View {{ g.count }} click{{ g.count|pluralize }} <i class="fa-solid fa-arrow-right" style="font-size:10px;"></i>
+                        </a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -181,7 +163,7 @@
         <div class="empty-icon"><i class="fa-solid fa-hand-pointer"></i></div>
         <div class="empty-title">No clicks yet</div>
         <div class="empty-desc">
-            Embed the integration code in your website. Once someone clicks the button, the data will appear here.
+            Embed the integration code on your website. Once someone clicks the tracked button, visitor sessions will appear here.
         </div>
         <a href="{% url 'project_dashboard' project.id %}" class="btn btn-ghost" style="margin-top:20px;">
             <i class="fa-solid fa-code"></i> Get Integration Code
@@ -190,4 +172,45 @@
     {% endif %}
 </div>
 
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+.stat-accent-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.stat-accent-icon {
+    width: 38px; height: 38px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+}
+.stat-accent-num { font-size: 28px; font-weight: 800; color: var(--text); line-height: 1; }
+.stat-accent-lbl { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+.ip-code {
+    font-family: 'Courier New', monospace; font-size: 12px;
+    background: var(--surface2); padding: 4px 9px;
+    border-radius: 6px; color: var(--accent);
+    border: 1px solid var(--border); font-weight: 600;
+    white-space: nowrap;
+}
+.click-count-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 32px; padding: 3px 10px;
+    background: var(--accent-light); color: var(--accent);
+    border-radius: 20px; font-size: 12px; font-weight: 700;
+}
+.time-cell { display: flex; flex-direction: column; gap: 1px; }
+.time-date { font-size: 13px; color: var(--text); font-weight: 500; }
+.time-hour { font-size: 11px; color: var(--text-muted); }
+.dim-text { color: var(--text-dim); font-style: italic; font-size: 12px; }
+@media (max-width: 700px) {
+    div[style*="grid-template-columns:repeat(3"] { grid-template-columns: 1fr !important; }
+}
+</style>
 {% endblock %}

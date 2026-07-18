@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}{{ ip }} — {{ tracker.name }} — ClickTrack{% endblock %}
+
+{% block breadcrumb %}
+<nav class="breadcrumb">
+    <a href="{% url 'dashboard' %}">Dashboard</a>
+    <span class="sep">/</span>
+    <a href="{% url 'project_dashboard' project.id %}">{{ project.name }}</a>
+    <span class="sep">/</span>
+    <a href="{% url 'site_analytics' tracker.id %}">{{ tracker.name }}</a>
+    <span class="sep">/</span>
+    <span class="current">{{ ip }}</span>
+</nav>
+{% endblock %}
+
+{% block sidebar_extra %}
+<div class="nav-label">Project</div>
+<a href="{% url 'project_dashboard' project.id %}" class="nav-link">
+    <i class="fa-solid fa-folder-open"></i> {{ project.name|truncatechars:20 }}
+</a>
+<a href="{% url 'site_analytics' tracker.id %}" class="nav-link">
+    <i class="fa-solid fa-globe"></i> {{ tracker.name|truncatechars:18 }}
+</a>
+<a href="#" class="nav-link active">
+    <i class="fa-solid fa-address-card"></i> IP Detail
+</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- IP Header Card -->
+<div class="card" style="margin-bottom:22px;">
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap; margin-bottom:20px;">
+        <div style="display:flex; align-items:flex-start; gap:16px;">
+            <div style="
+                width:52px; height:52px; border-radius:12px;
+                background:var(--salmon-light); color:var(--salmon);
+                display:flex; align-items:center; justify-content:center;
+                font-size:22px; flex-shrink:0;
+            "><i class="fa-solid fa-address-card"></i></div>
+            <div>
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px;">
+                    <h1 style="font-size:18px; font-weight:800; color:var(--text); font-family:'Courier New', monospace;">{{ ip }}</h1>
+                    <span class="badge badge-salmon">{{ total }} click{{ total|pluralize }}</span>
+                    <span style="font-size:10px; font-weight:700; background:var(--peach); color:#7a3f28; padding:2px 8px; border-radius:20px; letter-spacing:0.5px;">SITE TRACKER</span>
+                </div>
+                {% if location %}
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:5px;">
+                    <i class="fa-solid fa-location-dot" style="color:var(--salmon); font-size:12px;"></i>
+                    <span style="font-size:13px; color:var(--text-muted);">{{ location }}</span>
+                </div>
+                {% endif %}
+                {% if user_agent %}
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <i class="fa-solid fa-display" style="color:var(--text-dim); font-size:11px;"></i>
+                    <span style="font-size:12px; color:var(--text-muted);">{{ user_agent|truncatechars:80 }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <a href="{% url 'site_analytics' tracker.id %}" class="btn btn-ghost btn-sm">
+            <i class="fa-solid fa-arrow-left"></i> Back to {{ tracker.name }}
+        </a>
+    </div>
+
+    <!-- Mini stats -->
+    <div style="display:flex; gap:20px; flex-wrap:wrap; padding:14px 16px; background:var(--surface2); border:1px solid var(--border); border-radius:10px;">
+        <div>
+            <div style="font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:2px;">Tracker</div>
+            <div style="font-size:13px; font-weight:600; color:var(--text);">{{ tracker.name }}</div>
+        </div>
+        <div style="width:1px; background:var(--border);"></div>
+        <div>
+            <div style="font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:2px;">Project</div>
+            <div style="font-size:13px; font-weight:600; color:var(--text);">{{ project.name }}</div>
+        </div>
+        {% if clicks.first %}
+        <div style="width:1px; background:var(--border);"></div>
+        <div>
+            <div style="font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:2px;">First Seen</div>
+            <div style="font-size:13px; font-weight:600; color:var(--text);">{{ clicks.last.clicked_at|date:"M d, Y · H:i" }}</div>
+        </div>
+        <div style="width:1px; background:var(--border);"></div>
+        <div>
+            <div style="font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:2px;">Last Seen</div>
+            <div style="font-size:13px; font-weight:600; color:var(--text);">{{ clicks.first.clicked_at|date:"M d, Y · H:i" }}</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Click log -->
+<div class="card">
+    <div class="card-header">
+        <div>
+            <div class="card-title"><i class="fa-solid fa-clock-rotate-left" style="color:var(--salmon); margin-right:8px;"></i>Click Log</div>
+            <div class="card-subtitle">All {{ total }} click{{ total|pluralize }} from {{ ip }}</div>
+        </div>
+    </div>
+
+    {% if clicks %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Date &amp; Time</th>
+                    <th>Element Clicked</th>
+                    <th>Page URL</th>
+                    <th>Referrer</th>
+                    <th>Device / Browser</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for click in clicks %}
+                <tr>
+                    <td style="color:var(--text-dim); font-size:12px; font-weight:600; width:36px;">{{ forloop.counter }}</td>
+                    <td style="white-space:nowrap;">
+                        <div class="time-cell">
+                            <span class="time-date">{{ click.clicked_at|date:"M d, Y" }}</span>
+                            <span class="time-hour">{{ click.clicked_at|date:"H:i:s" }}</span>
+                        </div>
+                    </td>
+                    <td style="max-width:220px;">
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                                {% if click.element_tag %}
+                                <code style="font-size:10px; color:var(--salmon); background:rgba(226,149,120,0.12); padding:2px 6px; border-radius:4px; text-transform:lowercase; flex-shrink:0; border:1px solid rgba(226,149,120,0.25);">{{ click.element_tag|lower }}</code>
+                                {% endif %}
+                                {% if click.element_text %}
+                                <span style="font-size:12.5px; color:var(--text); font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:140px;" title="{{ click.element_text }}">{{ click.element_text|truncatechars:38 }}</span>
+                                {% endif %}
+                            </div>
+                            {% if click.element_href and click.element_href != "#" %}
+                            <span style="font-size:11px; color:var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:200px;" title="{{ click.element_href }}">
+                                <i class="fa-solid fa-link" style="font-size:9px; margin-right:3px;"></i>{{ click.element_href|truncatechars:38 }}
+                            </span>
+                            {% endif %}
+                            {% if click.element_id %}
+                            <code style="font-size:10px; background:var(--surface2); padding:1px 5px; border-radius:3px; color:var(--text-muted);">#{{ click.element_id|truncatechars:25 }}</code>
+                            {% endif %}
+                        </div>
+                        {% if not click.element_tag and not click.element_text %}
+                        <span class="dim-text">Unknown element</span>
+                        {% endif %}
+                    </td>
+                    <td style="max-width:200px;">
+                        {% if click.page_url %}
+                        <span style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-muted); font-size:12px;" title="{{ click.page_url }}">
+                            {{ click.page_url|truncatechars:50 }}
+                        </span>
+                        {% else %}
+                        <span class="dim-text">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="max-width:180px;">
+                        {% if click.referrer %}
+                        <span style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-muted); font-size:12px;" title="{{ click.referrer }}">
+                            <i class="fa-solid fa-arrow-turn-up fa-flip-horizontal" style="font-size:9px; margin-right:3px; color:var(--text-dim);"></i>{{ click.referrer|truncatechars:40 }}
+                        </span>
+                        {% else %}
+                        <span class="dim-text">Direct</span>
+                        {% endif %}
+                    </td>
+                    <td style="max-width:180px;">
+                        <span style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-muted); font-size:12px;" title="{{ click.user_agent }}">
+                            {{ click.user_agent|truncatechars:40|default:"—" }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon" style="background:var(--salmon-light); color:var(--salmon);"><i class="fa-solid fa-inbox"></i></div>
+        <div class="empty-title">No clicks found</div>
+        <div class="empty-desc">No click data found for this IP address.</div>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+.time-cell { display: flex; flex-direction: column; gap: 1px; }
+.time-date { font-size: 13px; color: var(--text); font-weight: 500; }
+.time-hour { font-size: 11px; color: var(--text-muted); }
+.dim-text { color: var(--text-dim); font-style: italic; font-size: 12px; }
+</style>
+{% endblock %}
