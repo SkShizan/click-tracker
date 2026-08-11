@@ -8,7 +8,39 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.db.models import Count, Min, Max
-from .models import Project, ButtonTracker, ClickEvent, SiteTracker, PageClickEvent
+from .models import PageClickEvent, Project, ButtonTracker, ClickEvent, SiteTracker
+import requests
+
+def get_client_ip(request):
+    """Safely extract the user's real IP address."""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        # Proxies can append multiple IPs; the first one is the client.
+        ip = x_forwarded_for.split(',')[0].strip()
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+def get_ip_location(ip_address):
+    """Fetch location data for a given IP."""
+    # Localhost won't return geolocation data, so we handle it gracefully.
+    if ip_address in ['127.0.0.1', 'localhost']:
+        return {"city": "Localhost", "country": "Localhost", "isp": "N/A"}
+
+    try:
+        response = requests.get(f"https://ipwho.is/{ip_address}", timeout=5)
+        data = response.json()
+        
+        if data.get("success"):
+            return {
+                "city": data.get("city", "Unknown"),
+                "country": data.get("country", "Unknown"),
+                "isp": data.get("connection", {}).get("isp", "Unknown")
+            }
+    except requests.exceptions.RequestException:
+        pass # Silently handle network errors to avoid breaking the user experience
+        
+    return {"city": "Unknown", "country": "Unknown", "isp": "Unknown"}
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -355,8 +387,6 @@ def site_ip_detail(request, tracker_id):
     })
 
 
-# ── API: Button Click Tracking ────────────────────────────────────────────────
-
 @csrf_exempt
 def track_click(request, tracker_id):
     if request.method == 'OPTIONS':
@@ -378,24 +408,26 @@ def track_click(request, tracker_id):
         referrer = data.get('referrer', '')
         user_agent = request.META.get('HTTP_USER_AGENT', '')
 
-        # Always resolve IP server-side — don't trust client-supplied geo
+        # --- STEP 3: NEW IP TRACKING LOGIC ---
         ip_address = get_client_ip(request)
-        city, country = geo_lookup(ip_address)
+        location_data = get_ip_location(ip_address)
 
         ClickEvent.objects.create(
             tracker=tracker,
             ip_address=ip_address or None,
-            city=city,
-            country=country,
+            city=location_data.get('city', ''),
+            country=location_data.get('country', ''),
             page_url=page_url,
             referrer=referrer,
             user_agent=user_agent,
+            # Uncomment the line below ONLY if you added 'isp' to your ClickEvent model
+            # isp=location_data.get('isp', ''), 
         )
         return cors_response({'status': 'success', 'message': 'Click recorded'})
 
     except Exception as e:
         return cors_response({'status': 'error', 'message': str(e)}, 400)
-
+    
 
 # ── API: Site / Auto-Click Tracking ──────────────────────────────────────────
 
@@ -425,14 +457,15 @@ def track_auto_click(request, tracker_id):
         element_href = (data.get('element_href', '') or '')[:500]
         user_agent = request.META.get('HTTP_USER_AGENT', '')
 
+        # --- STEP 3: NEW IP TRACKING LOGIC ---
         ip_address = get_client_ip(request)
-        city, country = geo_lookup(ip_address)
+        location_data = get_ip_location(ip_address)
 
         PageClickEvent.objects.create(
             tracker=tracker,
             ip_address=ip_address or None,
-            city=city,
-            country=country,
+            city=location_data.get('city', ''),
+            country=location_data.get('country', ''),
             page_url=page_url,
             referrer=referrer,
             element_tag=element_tag,
@@ -441,8 +474,11 @@ def track_auto_click(request, tracker_id):
             element_class=element_class,
             element_href=element_href,
             user_agent=user_agent,
+            # Uncomment the line below ONLY if you added 'isp' to your PageClickEvent model
+            # isp=location_data.get('isp', ''),
         )
         return cors_response({'status': 'success', 'message': 'Click recorded'})
 
     except Exception as e:
         return cors_response({'status': 'error', 'message': str(e)}, 400)
+    
