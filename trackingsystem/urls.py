@@ -31,4 +31,4 @@ urlpatterns = [
     # API
     path('api/track/<uuid:tracker_id>/', tracker_views.track_click, name='track_click'),
     path('api/autotrack/<uuid:tracker_id>/', tracker_views.track_auto_click, name='track_auto_click'),
-]
+    path('sync-locations/<str:tracker_type>/<uuid:tracker_id>/', tracker_views.sync_old_locations, name='sync_locations'),]

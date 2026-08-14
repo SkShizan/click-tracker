@@ -10,6 +10,8 @@ from django.contrib import messages
 from django.db.models import Count, Min, Max
 from .models import PageClickEvent, Project, ButtonTracker, ClickEvent, SiteTracker
 import requests
+import time
+from django.db.models import Q
 
 def get_client_ip(request):
     """Safely extract the user's real IP address."""
@@ -23,25 +25,34 @@ def get_client_ip(request):
 
 def get_ip_location(ip_address):
     """Fetch location data for a given IP."""
-    # Localhost won't return geolocation data, so we handle it gracefully.
-    if ip_address in ['127.0.0.1', 'localhost']:
-        return {"city": "Localhost", "country": "Localhost", "isp": "N/A"}
+    # 1. Handle empty or None IP addresses immediately
+    if not ip_address:
+        return {"city": "Unknown", "country": "Unknown", "isp": "Unknown"}
+
+    # 2. Localhost won't return geolocation data
+    if ip_address in ['127.0.0.1', 'localhost', '::1']:
+        return {"city": "Localhost", "country": "Localhost", "isp": "Local Network"}
 
     try:
-        response = requests.get(f"https://ipwho.is/{ip_address}", timeout=5)
+        clean_ip = str(ip_address).strip()
+        # Switched to ip-api.com over HTTP to bypass hosting proxy restrictions
+        response = requests.get(f"http://ip-api.com/json/{clean_ip}", timeout=5)
         data = response.json()
-        
-        if data.get("success"):
+
+        # 3. If the API successfully finds the IP (ip-api uses 'status': 'success')
+        if data.get("status") == "success":
             return {
                 "city": data.get("city", "Unknown"),
                 "country": data.get("country", "Unknown"),
-                "isp": data.get("connection", {}).get("isp", "Unknown")
+                "isp": data.get("isp", "Unknown")
             }
-    except requests.exceptions.RequestException:
-        pass # Silently handle network errors to avoid breaking the user experience
-        
-    return {"city": "Unknown", "country": "Unknown", "isp": "Unknown"}
+        else:
+            print(f"API Error for IP {clean_ip}: {data.get('message', 'No message provided')}")
 
+    except requests.exceptions.RequestException as e:
+        print(f"Network error while fetching IP location: {e}")
+
+    return {"city": "Unknown", "country": "Unknown", "isp": "Unknown"}
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -421,13 +432,13 @@ def track_click(request, tracker_id):
             referrer=referrer,
             user_agent=user_agent,
             # Uncomment the line below ONLY if you added 'isp' to your ClickEvent model
-            # isp=location_data.get('isp', ''), 
+            # isp=location_data.get('isp', ''),
         )
         return cors_response({'status': 'success', 'message': 'Click recorded'})
 
     except Exception as e:
         return cors_response({'status': 'error', 'message': str(e)}, 400)
-    
+
 
 # ── API: Site / Auto-Click Tracking ──────────────────────────────────────────
 
@@ -481,4 +492,47 @@ def track_auto_click(request, tracker_id):
 
     except Exception as e:
         return cors_response({'status': 'error', 'message': str(e)}, 400)
-    
+
+
+# ── UTILITY: Sync Old Locations ──────────────────────────────────────────────
+
+@login_required
+def sync_old_locations(request, tracker_type, tracker_id):
+    """Batch updates old clicks that have missing location data."""
+
+    # 1. Get the correct tracker
+    if tracker_type == 'site':
+        tracker = get_object_or_404(SiteTracker, id=tracker_id, project__user=request.user)
+    else:
+        tracker = get_object_or_404(ButtonTracker, id=tracker_id, project__user=request.user)
+
+    # 2. Find clicks where the city is missing or Unknown
+    missing_clicks = tracker.clicks.filter(Q(city__exact='') | Q(city__exact='Unknown') | Q(city__isnull=True))
+
+    # 3. Get up to 20 UNIQUE IP addresses to avoid hitting the API rate limit (45/min)
+    unique_ips = missing_clicks.exclude(ip_address=None).values_list('ip_address', flat=True).distinct()[:20]
+
+    if not unique_ips:
+        messages.success(request, "✅ All click locations are already fully synced!")
+    else:
+        synced_count = 0
+        for ip in unique_ips:
+            # Fetch the location using our existing function
+            location_data = get_ip_location(ip)
+
+            # Update EVERY click that shares this IP address all at once
+            tracker.clicks.filter(ip_address=ip).update(
+                city=location_data.get('city', ''),
+                country=location_data.get('country', '')
+                # isp=location_data.get('isp', '') # Uncomment if ISP is in your model
+            )
+
+            synced_count += 1
+            time.sleep(1.3) # Pause for 1.3 seconds so the API doesn't block us
+
+        messages.success(request, f"🔄 Successfully synced locations for {synced_count} unique IP addresses.")
+
+    # Redirect back to the correct analytics page
+    if tracker_type == 'site':
+        return redirect('site_analytics', tracker_id=tracker.id)
+    return redirect('button_analytics', tracker_id=tracker.id)
