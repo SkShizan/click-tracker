@@ -875,8 +875,8 @@ def sync_old_locations(request, tracker_type, tracker_id):
     else:
         tracker = get_object_or_404(ButtonTracker, id=tracker_id, project__user=request.user)
 
-    # 2. Find clicks where the city is missing or Unknown
-    missing_clicks = tracker.clicks.filter(Q(city__exact='') | Q(city__exact='Unknown') | Q(city__isnull=True))
+    # 2. Find clicks where the city is missing or Unknown, OR latitude is missing
+    missing_clicks = tracker.clicks.filter(Q(city__exact='') | Q(city__exact='Unknown') | Q(city__isnull=True) | Q(latitude__isnull=True))
 
     # 3. Get up to 20 UNIQUE IP addresses to avoid hitting the API rate limit (45/min)
     unique_ips = missing_clicks.exclude(ip_address=None).values_list('ip_address', flat=True).distinct()[:20]
@@ -892,8 +892,9 @@ def sync_old_locations(request, tracker_type, tracker_id):
             # Update EVERY click that shares this IP address all at once
             tracker.clicks.filter(ip_address=ip).update(
                 city=location_data.get('city', ''),
-                country=location_data.get('country', '')
-                # isp=location_data.get('isp', '') # Uncomment if ISP is in your model
+                country=location_data.get('country', ''),
+                latitude=location_data.get('lat'),
+                longitude=location_data.get('lon')
             )
 
             synced_count += 1
