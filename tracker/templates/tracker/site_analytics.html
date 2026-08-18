@@ -54,107 +54,169 @@
                 </div>
             </div>
         </div>
-        <a href="{% url 'project_dashboard' project.id %}" class="btn btn-ghost btn-sm">
-            <i class="fa-solid fa-arrow-left"></i> Back to {{ project.name }}
-        </a>
-    </div>
-    <hr class="divider">
-    <!-- Stats -->
-    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px;">
-        <div class="stat-accent-card">
-            <div class="stat-accent-icon" style="background:rgba(226,149,120,0.15); color:var(--salmon);">
-                <i class="fa-solid fa-hand-pointer"></i>
-            </div>
-            <div class="stat-accent-num">{{ total }}</div>
-            <div class="stat-accent-lbl">Total Clicks</div>
-        </div>
-        <div class="stat-accent-card">
-            <div class="stat-accent-icon" style="background:var(--accent-light); color:var(--accent);">
-                <i class="fa-solid fa-file-lines"></i>
-            </div>
-            <div class="stat-accent-num">{{ unique_pages }}</div>
-            <div class="stat-accent-lbl">Unique Pages</div>
-        </div>
-        <div class="stat-accent-card">
-            <div class="stat-accent-icon" style="background:var(--teal-light); color:var(--accent);">
-                <i class="fa-solid fa-globe"></i>
-            </div>
-            <div class="stat-accent-num">{{ unique_countries }}</div>
-            <div class="stat-accent-lbl">Countries</div>
-        </div>
-        <div class="stat-accent-card">
-            <div class="stat-accent-icon" style="background:rgba(255,221,210,0.5); color:#c06040;">
-                <i class="fa-solid fa-fingerprint"></i>
-            </div>
-            <div class="stat-accent-num">{{ unique_ips }}</div>
-            <div class="stat-accent-lbl">Unique Visitors</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <a href="{% url 'project_dashboard' project.id %}" class="btn btn-ghost btn-sm">
+                <i class="fa-solid fa-arrow-left"></i> Back to {{ project.name }}
+            </a>
         </div>
     </div>
 </div>
 
+<!-- Date Range Filter -->
+<form method="GET" class="filter-bar" id="dateFilterForm">
+    <i class="fa-solid fa-calendar-days" style="color:var(--salmon); font-size:14px;"></i>
+    <label>Date Range:</label>
+    <input type="date" name="from" value="{{ date_from }}" id="dateFrom">
+    <span class="filter-sep">to</span>
+    <input type="date" name="to" value="{{ date_to }}" id="dateTo">
+    <div class="filter-actions">
+        <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-filter"></i> Apply</button>
+        <a href="{% url 'site_analytics' tracker.id %}" class="btn btn-ghost btn-sm"><i class="fa-solid fa-xmark"></i> Clear</a>
+    </div>
+</form>
+
+<!-- Stats -->
+<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:22px;">
+    <div class="stat-accent-card">
+        <div class="stat-accent-icon" style="background:rgba(226,149,120,0.15); color:var(--salmon);">
+            <i class="fa-solid fa-hand-pointer"></i>
+        </div>
+        <div class="stat-accent-num">{{ total }}</div>
+        <div class="stat-accent-lbl">Total Clicks</div>
+    </div>
+    <div class="stat-accent-card">
+        <div class="stat-accent-icon" style="background:var(--accent-light); color:var(--accent);">
+            <i class="fa-solid fa-file-lines"></i>
+        </div>
+        <div class="stat-accent-num">{{ unique_pages }}</div>
+        <div class="stat-accent-lbl">Unique Pages</div>
+    </div>
+    <div class="stat-accent-card">
+        <div class="stat-accent-icon" style="background:var(--teal-light); color:var(--accent);">
+            <i class="fa-solid fa-globe"></i>
+        </div>
+        <div class="stat-accent-num">{{ unique_countries }}</div>
+        <div class="stat-accent-lbl">Countries</div>
+    </div>
+    <div class="stat-accent-card">
+        <div class="stat-accent-icon" style="background:rgba(255,221,210,0.5); color:#c06040;">
+            <i class="fa-solid fa-fingerprint"></i>
+        </div>
+        <div class="stat-accent-num">{{ unique_ips }}</div>
+        <div class="stat-accent-lbl">Unique Visitors</div>
+    </div>
+</div>
+
 {% if total %}
-<!-- Insights row -->
-<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:22px;">
+<!-- Clicks Over Time Chart -->
+<div class="chart-card" style="margin-bottom:22px;">
+    <div class="chart-title"><i class="fa-solid fa-chart-line" style="color:var(--salmon); margin-right:7px;"></i>Clicks Over Time</div>
+    <div class="chart-subtitle">Daily click activity trend</div>
+    <div style="position:relative; height:280px;">
+        <canvas id="clicksTrendChart"></canvas>
+    </div>
+</div>
 
-    <!-- Top Pages -->
-    <div class="card" style="margin-bottom:0;">
-        <div class="card-header" style="margin-bottom:16px;">
-            <div>
-                <div class="card-title">
-                    <i class="fa-solid fa-file-lines" style="color:var(--accent); margin-right:7px;"></i>Top Pages
-                </div>
-                <div class="card-subtitle">Most clicked URLs on your site</div>
-            </div>
+<!-- Charts Row: Countries Doughnut + Countries Bar + Cities Bar -->
+<div class="chart-grid-3">
+    <div class="chart-card">
+        <div class="chart-title"><i class="fa-solid fa-earth-americas" style="color:var(--accent); margin-right:7px;"></i>Countries</div>
+        <div class="chart-subtitle">Click distribution by country</div>
+        <div style="position:relative; height:220px;">
+            <canvas id="countryChart"></canvas>
         </div>
+    </div>
+    <div class="chart-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+            <div>
+                <div class="chart-title"><i class="fa-solid fa-chart-bar" style="color:var(--salmon); margin-right:7px;"></i>Country Traffic</div>
+                <div class="chart-subtitle">Clicks per country (bar)</div>
+            </div>
+            <select id="countryViewToggle" onchange="toggleCountryView()" style="padding:4px 8px; font-size:11px; border:1px solid var(--border); border-radius:4px; max-width:110px; background:var(--surface2);">
+                <option value="chart">Chart View</option>
+                <option value="map">Map View</option>
+            </select>
+        </div>
+        <div id="countryChartContainer" style="position:relative; height:220px;">
+            <canvas id="countryBarChart"></canvas>
+        </div>
+        <div id="countryMapContainer" style="position:relative; height:220px; display:none; border-radius:6px; overflow:hidden; z-index:1;"></div>
+    </div>
+    <div class="chart-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+            <div>
+                <div class="chart-title"><i class="fa-solid fa-city" style="color:var(--accent); margin-right:7px;"></i>Top Cities</div>
+                <div class="chart-subtitle">City-level click breakdown</div>
+            </div>
+            <select id="cityViewToggle" onchange="toggleCityView()" style="padding:4px 8px; font-size:11px; border:1px solid var(--border); border-radius:4px; max-width:110px; background:var(--surface2);">
+                <option value="chart">Chart View</option>
+                <option value="map">Map View</option>
+            </select>
+        </div>
+        <div id="cityChartContainer" style="position:relative; height:220px;">
+            <canvas id="cityBarChart"></canvas>
+        </div>
+        <div id="cityMapContainer" style="position:relative; height:220px; display:none; border-radius:6px; overflow:hidden; z-index:1;"></div>
+    </div>
+</div>
+
+<!-- Charts Row: Browser + Device + Top Pages -->
+<div class="chart-grid-3">
+    <div class="chart-card">
+        <div class="chart-title"><i class="fa-solid fa-globe" style="color:var(--salmon); margin-right:7px;"></i>Browser</div>
+        <div class="chart-subtitle">Visitors by browser</div>
+        <div style="position:relative; height:220px;">
+            <canvas id="browserChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-card">
+        <div class="chart-title"><i class="fa-solid fa-mobile-screen" style="color:var(--accent); margin-right:7px;"></i>Devices</div>
+        <div class="chart-subtitle">Desktop vs Mobile vs Tablet</div>
+        <div style="position:relative; height:220px;">
+            <canvas id="deviceChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-card">
+        <div class="chart-title"><i class="fa-solid fa-file-lines" style="color:var(--accent); margin-right:7px;"></i>Top Pages</div>
+        <div class="chart-subtitle">Most clicked URLs on your site</div>
         {% if top_pages %}
-        <div style="display:flex; flex-direction:column; gap:6px;">
-            {% for page in top_pages %}
-            {% widthratio page.count total 100 as pct %}
-            <div style="display:flex; flex-direction:column; gap:4px;">
-                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-                    <span style="font-size:12px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;" title="{{ page.page_url }}">
-                        {{ page.page_url|truncatechars:52 }}
-                    </span>
-                    <span class="click-count-badge" style="background:var(--accent-light); color:var(--accent);">{{ page.count }}</span>
-                </div>
-                <div style="height:4px; background:var(--surface2); border-radius:2px; overflow:hidden;">
-                    <div style="height:100%; width:{{ pct }}%; background:var(--accent); border-radius:2px; min-width:4px;"></div>
-                </div>
-            </div>
-            {% endfor %}
+        <div style="position:relative; height:220px;">
+            <canvas id="topPagesChart"></canvas>
         </div>
         {% else %}
         <p style="color:var(--text-dim); font-size:13px; text-align:center; padding:20px 0;">No data yet</p>
         {% endif %}
     </div>
+</div>
 
-    <!-- Top Elements -->
-    <div class="card" style="margin-bottom:0;">
-        <div class="card-header" style="margin-bottom:16px;">
-            <div>
-                <div class="card-title">
-                    <i class="fa-solid fa-hand-pointer" style="color:var(--salmon); margin-right:7px;"></i>Top Elements
-                </div>
-                <div class="card-subtitle">Most clicked buttons &amp; links</div>
-            </div>
-        </div>
-        {% if top_elements %}
-        <div style="display:flex; flex-direction:column; gap:6px;">
-            {% for el in top_elements %}
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:8px;">
-                <div style="overflow:hidden; flex:1; display:flex; align-items:center; gap:7px;">
-                    <code style="font-size:10px; color:var(--salmon); background:rgba(226,149,120,0.12); padding:2px 6px; border-radius:4px; text-transform:lowercase; flex-shrink:0; border:1px solid rgba(226,149,120,0.25);">{{ el.element_tag|lower }}</code>
-                    <span style="font-size:12.5px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ el.element_text|truncatechars:38 }}</span>
-                </div>
-                <span class="click-count-badge" style="background:var(--salmon-light); color:var(--salmon);">{{ el.count }}</span>
-            </div>
-            {% endfor %}
-        </div>
-        {% else %}
-        <p style="color:var(--text-dim); font-size:13px; text-align:center; padding:20px 0;">No data yet</p>
-        {% endif %}
+<!-- Location Details Table -->
+<div class="chart-card" style="margin-bottom:22px;">
+    <div class="chart-title"><i class="fa-solid fa-map-location-dot" style="color:var(--salmon); margin-right:7px;"></i>Traffic Locations</div>
+    <div class="chart-subtitle">Where your traffic is coming from</div>
+    <div id="locationDetails" style="margin-top:12px;">
+        <!-- Populated by JS -->
     </div>
+</div>
 
+<!-- Top Elements -->
+<div class="chart-card" style="margin-bottom:22px;">
+    <div class="chart-title"><i class="fa-solid fa-hand-pointer" style="color:var(--salmon); margin-right:7px;"></i>Top Elements</div>
+    <div class="chart-subtitle">Most clicked buttons &amp; links</div>
+    {% if top_elements %}
+    <div style="display:flex; flex-direction:column; gap:6px; margin-top:12px;">
+        {% for el in top_elements %}
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:8px;">
+            <div style="overflow:hidden; flex:1; display:flex; align-items:center; gap:7px;">
+                <code style="font-size:10px; color:var(--salmon); background:rgba(226,149,120,0.12); padding:2px 6px; border-radius:4px; text-transform:lowercase; flex-shrink:0; border:1px solid rgba(226,149,120,0.25);">{{ el.element_tag|lower }}</code>
+                <span style="font-size:12.5px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ el.element_text|truncatechars:38 }}</span>
+            </div>
+            <span class="click-count-badge" style="background:var(--salmon-light); color:var(--salmon);">{{ el.count }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="color:var(--text-dim); font-size:13px; text-align:center; padding:20px 0;">No data yet</p>
+    {% endif %}
 </div>
 {% endif %}
 
@@ -168,15 +230,26 @@
             </div>
         </div>
         {% if ip_groups %}
-        <span class="badge badge-salmon">
-            <i class="fa-solid fa-circle" style="font-size:7px; margin-right:5px;"></i>Live
-        </span>
+        <div style="display:flex; align-items:center; gap:12px;">
+            <select id="tableSortSelect" onchange="sortTable()" style="padding:6px 10px; font-size:12px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); color:var(--text); font-family:'Inter',sans-serif; cursor:pointer;">
+                <option value="recent" {% if sort_by == 'recent' %}selected{% endif %}>Sort: Most Recent</option>
+                <option value="clicks" {% if sort_by == 'clicks' %}selected{% endif %}>Sort: Most Clicks</option>
+                <option value="az">Sort: A-Z (IP)</option>
+            </select>
+            <div class="search-wrap">
+                <i class="fa-solid fa-search"></i>
+                <input type="text" class="search-input" id="tableSearch" placeholder="Search IP, location, agent..." oninput="filterTable()">
+            </div>
+            <span class="badge badge-salmon">
+                <i class="fa-solid fa-circle" style="font-size:7px; margin-right:5px;"></i>Live
+            </span>
+        </div>
         {% endif %}
     </div>
 
     {% if ip_groups %}
     <div class="table-wrap">
-        <table>
+        <table id="visitorTable">
             <thead>
                 <tr>
                     <th>IP Address</th>
@@ -190,7 +263,7 @@
             </thead>
             <tbody>
                 {% for g in ip_groups %}
-                <tr>
+                <tr data-clicks="{{ g.count }}" data-lastseen="{{ g.last_seen|date:'Y-m-d H:i' }}" data-ip="{{ g.ip_address|default:'zzz' }}">
                     <td>
                         {% if g.ip_address %}
                         <code class="ip-code" style="color:var(--salmon);">{{ g.ip_address }}</code>
@@ -265,13 +338,14 @@
 {% block extra_scripts %}
 <style>
 .stat-accent-card {
-    background: var(--surface2);
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 18px 20px;
     display: flex;
     flex-direction: column;
     gap: 8px;
+    box-shadow: var(--shadow-sm);
 }
 .stat-accent-icon {
     width: 38px; height: 38px; border-radius: 9px;
@@ -295,9 +369,344 @@
 .time-date { font-size: 13px; color: var(--text); font-weight: 500; }
 .time-hour { font-size: 11px; color: var(--text-muted); }
 .dim-text { color: var(--text-dim); font-style: italic; font-size: 12px; }
+.loc-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px;
+}
+.loc-bar { height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+.loc-bar-fill { height: 100%; border-radius: 3px; min-width: 4px; }
 @media (max-width: 800px) {
     div[style*="grid-template-columns:repeat(4"] { grid-template-columns: 1fr 1fr !important; }
-    div[style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
 }
 </style>
+
+<script>
+// ── Table search filter ──
+function filterTable() {
+    const q = document.getElementById('tableSearch').value.toLowerCase();
+    const rows = document.querySelectorAll('#visitorTable tbody tr');
+    rows.forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+
+// ── Table sort ──
+function sortTable() {
+    const select = document.getElementById('tableSortSelect');
+    const tbody = document.querySelector('#visitorTable tbody');
+    if (!tbody) return;
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const mode = select.value;
+    rows.sort((a, b) => {
+        if (mode === 'clicks') {
+            return parseInt(b.dataset.clicks) - parseInt(a.dataset.clicks);
+        } else if (mode === 'az') {
+            return (a.dataset.ip || '').localeCompare(b.dataset.ip || '');
+        } else { // recent
+            return (b.dataset.lastseen || '').localeCompare(a.dataset.lastseen || '');
+        }
+    });
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+// ── Chart.js theme colors ──
+const COLORS = {
+    salmon: '#e29578',
+    salmonLight: 'rgba(226,149,120,0.15)',
+    accent: '#006d77',
+    accentLight: 'rgba(0,109,119,0.10)',
+    teal: '#83c5be',
+    peach: '#ffddd2',
+    palette: ['#e29578','#006d77','#83c5be','#ffddd2','#f5c4b4','#005860','#b8d5dd','#4a7c83','#c06040','#0d2b2e']
+};
+
+{% if total %}
+// ── 1. Clicks Over Time (Line Chart) ──
+(function() {
+    const data = {{ daily_clicks|safe }};
+    if (!data.length) return;
+    const ctx = document.getElementById('clicksTrendChart').getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+    gradient.addColorStop(0, 'rgba(226,149,120,0.35)');
+    gradient.addColorStop(1, 'rgba(226,149,120,0.02)');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.map(d => d.date),
+            datasets: [{
+                label: 'Clicks',
+                data: data.map(d => d.count),
+                borderColor: COLORS.salmon,
+                backgroundColor: gradient,
+                borderWidth: 2.5,
+                fill: true,
+                tension: 0.35,
+                pointRadius: 3,
+                pointBackgroundColor: COLORS.salmon,
+                pointHoverRadius: 6,
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: COLORS.salmon,
+                pointHoverBorderWidth: 2,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { size: 11, family: 'Inter' }, color: '#4a7c83', maxTicksLimit: 12 } },
+                y: { beginAtZero: true, grid: { color: 'rgba(0,109,119,0.06)' }, ticks: { font: { size: 11, family: 'Inter' }, color: '#4a7c83' } }
+            },
+            interaction: { intersect: false, mode: 'index' }
+        }
+    });
+})();
+
+// ── 2. Countries (Doughnut) ──
+(function() {
+    const data = {{ country_data|safe }};
+    if (!data.length) return;
+    new Chart(document.getElementById('countryChart'), {
+        type: 'doughnut',
+        data: {
+            labels: data.map(d => d.country),
+            datasets: [{ data: data.map(d => d.count), backgroundColor: COLORS.palette.slice(0, data.length), borderWidth: 2, borderColor: '#f4f9fb' }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, cutout: '62%',
+            plugins: {
+                legend: { position: 'right', labels: { font: { size: 11, family: 'Inter' }, color: '#0d2b2e', padding: 12, usePointStyle: true, pointStyleWidth: 10 } }
+            }
+        }
+    });
+})();
+
+// ── 3. Countries Bar Chart ──
+(function() {
+    const data = {{ country_data|safe }};
+    if (!data.length) return;
+    new Chart(document.getElementById('countryBarChart'), {
+        type: 'bar',
+        data: {
+            labels: data.map(d => d.country),
+            datasets: [{
+                data: data.map(d => d.count),
+                backgroundColor: data.map((_, i) => COLORS.palette[i % COLORS.palette.length]),
+                borderRadius: 4,
+                borderSkipped: false,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { size: 10, family: 'Inter' }, color: '#4a7c83' } },
+                y: { beginAtZero: true, grid: { color: 'rgba(0,109,119,0.06)' }, ticks: { font: { size: 11, family: 'Inter' }, color: '#4a7c83' } }
+            }
+        }
+    });
+})();
+
+// ── 4. City Bar Chart (Horizontal) ──
+(function() {
+    const data = {{ city_data|safe }};
+    if (!data.length) return;
+    new Chart(document.getElementById('cityBarChart'), {
+        type: 'bar',
+        data: {
+            labels: data.map(d => d.city + (d.country ? ', ' + d.country : '')),
+            datasets: [{
+                data: data.map(d => d.count),
+                backgroundColor: 'rgba(0,109,119,0.70)',
+                hoverBackgroundColor: COLORS.accent,
+                borderRadius: 4,
+                borderSkipped: false,
+                barThickness: 14,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { beginAtZero: true, grid: { color: 'rgba(0,109,119,0.06)' }, ticks: { font: { size: 10, family: 'Inter' }, color: '#4a7c83' } },
+                y: { grid: { display: false }, ticks: { font: { size: 10, family: 'Inter' }, color: '#0d2b2e' } }
+            }
+        }
+    });
+})();
+
+// ── 5. Browser (Doughnut) ──
+(function() {
+    const data = {{ browser_data|safe }};
+    if (!data.length) return;
+    new Chart(document.getElementById('browserChart'), {
+        type: 'doughnut',
+        data: {
+            labels: data.map(d => d.name),
+            datasets: [{ data: data.map(d => d.count), backgroundColor: COLORS.palette.slice(0, data.length), borderWidth: 2, borderColor: '#f4f9fb' }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, cutout: '62%',
+            plugins: {
+                legend: { position: 'right', labels: { font: { size: 11, family: 'Inter' }, color: '#0d2b2e', padding: 12, usePointStyle: true, pointStyleWidth: 10 } }
+            }
+        }
+    });
+})();
+
+// ── 6. Devices (Doughnut) ──
+(function() {
+    const data = {{ device_data|safe }};
+    if (!data.length) return;
+    new Chart(document.getElementById('deviceChart'), {
+        type: 'doughnut',
+        data: {
+            labels: data.map(d => d.name),
+            datasets: [{ data: data.map(d => d.count), backgroundColor: [COLORS.accent, COLORS.salmon, COLORS.teal], borderWidth: 2, borderColor: '#f4f9fb' }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, cutout: '62%',
+            plugins: {
+                legend: { position: 'right', labels: { font: { size: 11, family: 'Inter' }, color: '#0d2b2e', padding: 12, usePointStyle: true, pointStyleWidth: 10 } }
+            }
+        }
+    });
+})();
+
+// ── 7. Top Pages (Horizontal Bar) ──
+{% if top_pages %}
+(function() {
+    const pages = [{% for p in top_pages %}{ url: "{{ p.page_url|truncatechars:40|escapejs }}", count: {{ p.count }} },{% endfor %}];
+    if (!pages.length) return;
+    new Chart(document.getElementById('topPagesChart'), {
+        type: 'bar',
+        data: {
+            labels: pages.map(p => p.url),
+            datasets: [{
+                data: pages.map(p => p.count),
+                backgroundColor: 'rgba(226,149,120,0.65)',
+                hoverBackgroundColor: COLORS.salmon,
+                borderRadius: 4,
+                borderSkipped: false,
+                barThickness: 16,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { beginAtZero: true, grid: { color: 'rgba(0,109,119,0.06)' }, ticks: { font: { size: 11, family: 'Inter' }, color: '#4a7c83' } },
+                y: { grid: { display: false }, ticks: { font: { size: 10, family: 'Inter' }, color: '#0d2b2e' } }
+            }
+        }
+    });
+})();
+{% endif %}
+
+// ── 8. Traffic Locations Detail ──
+(function() {
+    const locations = {{ location_data|safe }};
+    const container = document.getElementById('locationDetails');
+    if (!locations.length) {
+        container.innerHTML = '<p style="color:var(--text-dim); font-size:13px; text-align:center; padding:12px;">No location data available</p>';
+        return;
+    }
+    const maxCount = Math.max(...locations.map(l => l.count));
+    let html = '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">';
+    locations.forEach(l => {
+        const pct = Math.round((l.count / maxCount) * 100);
+        html += `
+            <div class="loc-row">
+                <div style="flex:1;">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <i class="fa-solid fa-location-dot" style="color:var(--salmon); font-size:11px;"></i>
+                        <strong style="font-size:12.5px; color:var(--text);">${l.city}</strong>
+                        <span style="font-size:11px; color:var(--text-muted);">${l.country}</span>
+                    </div>
+                    <div class="loc-bar"><div class="loc-bar-fill" style="width:${pct}%; background:var(--accent);"></div></div>
+                </div>
+                <span class="click-count-badge" style="background:var(--accent-light); color:var(--accent);">${l.count}</span>
+            </div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+})();
+{% endif %}
+
+// ── Auto-sort table on load ──
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('tableSortSelect')) sortTable();
+});
+
+// ── Leaflet Maps Logic ──
+let countryMap = null;
+let cityMap = null;
+const mapDataCountry = {{ country_map_json|safe|default:"[]" }};
+const mapDataCity = {{ city_map_json|safe|default:"[]" }};
+
+function initMap(mapId, dataset, isCountry) {
+    const mapObj = L.map(mapId).setView([20, 0], 2);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO'
+    }).addTo(mapObj);
+
+    if (!dataset || dataset.length === 0) return mapObj;
+    const maxCount = Math.max(...dataset.map(d => d.count));
+
+    dataset.forEach(d => {
+        if (!d.lat || !d.lon) return;
+        const radius = Math.max(4, Math.min(25, (d.count / maxCount) * 20));
+        const color = isCountry ? '#006d77' : '#e29578';
+        const label = isCountry ? `<b>${d.country}</b><br>${d.count} clicks` : `<b>${d.city}, ${d.country}</b><br>${d.count} clicks`;
+        
+        L.circleMarker([d.lat, d.lon], {
+            radius: radius,
+            fillColor: color,
+            color: '#fff',
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.7
+        }).bindTooltip(label).addTo(mapObj);
+    });
+    return mapObj;
+}
+
+window.toggleCountryView = function() {
+    const v = document.getElementById('countryViewToggle').value;
+    const chartC = document.getElementById('countryChartContainer');
+    const mapC = document.getElementById('countryMapContainer');
+    if (v === 'map') {
+        chartC.style.display = 'none';
+        mapC.style.display = 'block';
+        if (!countryMap) {
+            countryMap = initMap('countryMapContainer', mapDataCountry, true);
+        } else {
+            countryMap.invalidateSize();
+        }
+    } else {
+        chartC.style.display = 'block';
+        mapC.style.display = 'none';
+    }
+};
+
+window.toggleCityView = function() {
+    const v = document.getElementById('cityViewToggle').value;
+    const chartC = document.getElementById('cityChartContainer');
+    const mapC = document.getElementById('cityMapContainer');
+    if (v === 'map') {
+        chartC.style.display = 'none';
+        mapC.style.display = 'block';
+        if (!cityMap) {
+            cityMap = initMap('cityMapContainer', mapDataCity, false);
+        } else {
+            cityMap.invalidateSize();
+        }
+    } else {
+        chartC.style.display = 'block';
+        mapC.style.display = 'none';
+    }
+};
+</script>
 {% endblock %}

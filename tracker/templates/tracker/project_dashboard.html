@@ -47,13 +47,38 @@
                 </p>
             </div>
         </div>
-        <div style="display:flex; gap:8px; flex-shrink:0;">
+        <div style="display:flex; gap:8px; flex-shrink:0; flex-wrap:wrap;">
+            <a href="{% url 'master_dashboard' project.id %}" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-chart-pie"></i> Master Dashboard
+            </a>
+            <form method="POST" action="{% url 'toggle_public_link' project.id %}" style="display:inline;">
+                {% csrf_token %}
+                {% if project.public_link and project.public_link.is_active %}
+                <button type="submit" class="btn btn-sm" style="background:var(--green-light); color:var(--green); border:1px solid rgba(0,109,119,0.2);">
+                    <i class="fa-solid fa-link"></i> Public Link ON
+                </button>
+                {% else %}
+                <button type="submit" class="btn btn-ghost btn-sm">
+                    <i class="fa-solid fa-share-nodes"></i> Share with Client
+                </button>
+                {% endif %}
+            </form>
             <button class="btn btn-danger btn-sm"
                 onclick="confirmDelete('{% url 'delete_project' project.id %}', '{{ project.name|escapejs }}', 'project')">
                 <i class="fa-solid fa-trash"></i> Delete Project
             </button>
         </div>
     </div>
+    {% if public_link and public_link.is_active %}
+    <div style="margin-top:16px; padding:12px 16px; background:rgba(0,109,119,0.06); border:1px solid rgba(0,109,119,0.15); border-radius:8px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <i class="fa-solid fa-link" style="color:var(--accent); font-size:14px;"></i>
+        <span style="font-size:12px; color:var(--text-muted); font-weight:600;">Public Dashboard URL:</span>
+        <code id="publicUrl" style="flex:1; font-size:12px; background:var(--surface); border:1px solid var(--border); padding:6px 10px; border-radius:6px; color:var(--accent); font-family:'Courier New',monospace; cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
+              onclick="navigator.clipboard.writeText(this.textContent.trim());this.style.color='var(--green)';this.textContent='✓ Copied!';setTimeout(()=>{this.textContent='{{ request.scheme }}://{{ request.get_host }}/public/{{ public_link.token }}/';this.style.color='var(--accent)';},1500);"
+              title="Click to copy">{{ request.scheme }}://{{ request.get_host }}/public/{{ public_link.token }}/</code>
+        <span style="font-size:11px; color:var(--text-dim);">Click to copy • Share with clients (no login needed)</span>
+    </div>
+    {% endif %}
     <hr class="divider">
     <div class="stats-grid" style="margin-bottom:0;">
         <div class="stat-card">

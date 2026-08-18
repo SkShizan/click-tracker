@@ -74,9 +74,6 @@
             </div>
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <a href="{% url 'sync_locations' 'site' tracker.id %}" class="btn btn-sm" style="background:var(--peach); color:#7a3f28; border:1px solid rgba(122,63,40,0.2); display: inline-flex; align-items: center; gap: 6px;">
-                <i class="fa-solid fa-rotate"></i> Sync Missing Locations
-            </a>
             <a href="{% url 'site_analytics' tracker.id %}" class="btn btn-ghost btn-sm">
                 <i class="fa-solid fa-arrow-left"></i> Back to {{ tracker.name }}
             </a>

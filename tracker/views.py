@@ -7,7 +7,7 @@ from django.contrib.auth import login
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
-from django.db.models import Count, Min, Max
+from django.db.models import Count, Min, Max, Avg
 from .models import PageClickEvent, Project, ButtonTracker, ClickEvent, SiteTracker
 import requests
 import time
@@ -44,7 +44,9 @@ def get_ip_location(ip_address):
             return {
                 "city": data.get("city", "Unknown"),
                 "country": data.get("country", "Unknown"),
-                "isp": data.get("isp", "Unknown")
+                "isp": data.get("isp", "Unknown"),
+                "lat": data.get("lat"),
+                "lon": data.get("lon"),
             }
         else:
             print(f"API Error for IP {clean_ip}: {data.get('message', 'No message provided')}")
@@ -188,11 +190,20 @@ def project_dashboard(request, project_id):
     total_site_clicks = PageClickEvent.objects.filter(tracker__project=project).count()
     total_clicks = total_btn_clicks + total_site_clicks
 
+    # Public share link
+    public_link = None
+    try:
+        from .models import PublicShareLink
+        public_link = project.public_link
+    except Exception:
+        pass
+
     context = {
         'project': project,
         'buttons': buttons,
         'site_trackers': site_trackers,
         'total_clicks': total_clicks,
+        'public_link': public_link,
     }
     return render(request, 'tracker/project_dashboard.html', context)
 
@@ -278,12 +289,22 @@ def build_ip_groups(clicks):
 @login_required
 def button_analytics(request, tracker_id):
     tracker = get_object_or_404(ButtonTracker, id=tracker_id, project__user=request.user)
+
+    # Date range filtering
+    date_from, date_to = parse_date_range(request)
     clicks = tracker.clicks.all().order_by('-clicked_at')
+    clicks = filter_clicks_by_date(clicks, date_from, date_to)
 
     total = clicks.count()
     unique_countries = clicks.exclude(country='').values('country').distinct().count()
     unique_ips = clicks.exclude(ip_address=None).values('ip_address').distinct().count()
     ip_groups = build_ip_groups(clicks)
+
+    # Chart data
+    daily_clicks = json.dumps(compute_daily_clicks(clicks))
+    country_data = json.dumps(compute_country_distribution(clicks))
+    country_map_json = json.dumps(compute_country_map_data(clicks))
+    city_map_json = json.dumps(compute_city_map_data(clicks))
 
     return render(request, 'tracker/button_analytics.html', {
         'tracker': tracker,
@@ -292,6 +313,12 @@ def button_analytics(request, tracker_id):
         'unique_countries': unique_countries,
         'unique_ips': unique_ips,
         'ip_groups': ip_groups,
+        'daily_clicks': daily_clicks,
+        'country_data': country_data,
+        'country_map_json': country_map_json,
+        'city_map_json': city_map_json,
+        'date_from': date_from.strftime('%Y-%m-%d') if date_from else '',
+        'date_to': date_to.strftime('%Y-%m-%d') if date_to else '',
     })
 
 
@@ -327,12 +354,158 @@ def button_ip_detail(request, tracker_id):
     })
 
 
+# ── Helpers: chart data ───────────────────────────────────────────────────────
+
+from datetime import datetime, timedelta
+from django.db.models.functions import TruncDate
+from collections import Counter
+import re as _re
+
+def parse_date_range(request):
+    """Parse from/to date query params. Returns (date_from, date_to) or (None, None)."""
+    date_from = request.GET.get('from', '')
+    date_to = request.GET.get('to', '')
+    try:
+        date_from = datetime.strptime(date_from, '%Y-%m-%d').date() if date_from else None
+    except ValueError:
+        date_from = None
+    try:
+        date_to = datetime.strptime(date_to, '%Y-%m-%d').date() if date_to else None
+    except ValueError:
+        date_to = None
+    return date_from, date_to
+
+
+def filter_clicks_by_date(clicks, date_from, date_to):
+    """Apply date range filter to a queryset."""
+    if date_from:
+        clicks = clicks.filter(clicked_at__date__gte=date_from)
+    if date_to:
+        clicks = clicks.filter(clicked_at__date__lte=date_to)
+    return clicks
+
+
+def compute_daily_clicks(clicks):
+    """Return list of {date: 'YYYY-MM-DD', count: N} for chart."""
+    daily = (
+        clicks.annotate(day=TruncDate('clicked_at'))
+        .values('day')
+        .annotate(count=Count('id'))
+        .order_by('day')
+    )
+    return [{'date': d['day'].strftime('%Y-%m-%d'), 'count': d['count']} for d in daily if d['day']]
+
+
+def compute_country_distribution(clicks):
+    """Return list of {country: str, count: N} for doughnut chart."""
+    countries = (
+        clicks.exclude(country='')
+        .values('country')
+        .annotate(count=Count('id'))
+        .order_by('-count')[:10]
+    )
+    return [{'country': c['country'], 'count': c['count']} for c in countries]
+
+
+def parse_browser(ua):
+    """Extract browser name from user agent string."""
+    if not ua:
+        return 'Unknown'
+    ua_lower = ua.lower()
+    if 'edg' in ua_lower:
+        return 'Edge'
+    if 'chrome' in ua_lower and 'chromium' not in ua_lower:
+        return 'Chrome'
+    if 'firefox' in ua_lower:
+        return 'Firefox'
+    if 'safari' in ua_lower and 'chrome' not in ua_lower:
+        return 'Safari'
+    if 'opera' in ua_lower or 'opr' in ua_lower:
+        return 'Opera'
+    return 'Other'
+
+
+def parse_device(ua):
+    """Extract device type from user agent string."""
+    if not ua:
+        return 'Unknown'
+    ua_lower = ua.lower()
+    if 'mobile' in ua_lower or 'android' in ua_lower and 'tablet' not in ua_lower:
+        return 'Mobile'
+    if 'tablet' in ua_lower or 'ipad' in ua_lower:
+        return 'Tablet'
+    return 'Desktop'
+
+
+def compute_browser_breakdown(clicks):
+    """Return browser distribution from user agents."""
+    agents = clicks.exclude(user_agent='').values_list('user_agent', flat=True)
+    counter = Counter(parse_browser(ua) for ua in agents)
+    return [{'name': k, 'count': v} for k, v in counter.most_common(6)]
+
+
+def compute_device_breakdown(clicks):
+    """Return device type distribution."""
+    agents = clicks.exclude(user_agent='').values_list('user_agent', flat=True)
+    counter = Counter(parse_device(ua) for ua in agents)
+    return [{'name': k, 'count': v} for k, v in counter.most_common(5)]
+
+
+def compute_city_distribution(clicks):
+    """Return list of {city, country, count} for city-level bar chart."""
+    cities = (
+        clicks.exclude(city='')
+        .values('city', 'country')
+        .annotate(count=Count('id'))
+        .order_by('-count')[:15]
+    )
+    return [{'city': c['city'], 'country': c['country'] or '', 'count': c['count']} for c in cities]
+
+
+def compute_location_points(clicks):
+    """Return unique IP locations for map/location visualization."""
+    # Group by city+country and count
+    locations = (
+        clicks.exclude(city='').exclude(country='')
+        .values('city', 'country')
+        .annotate(count=Count('id'))
+        .order_by('-count')[:50]
+    )
+    return [{'city': l['city'], 'country': l['country'], 'count': l['count']} for l in locations]
+
+
+def compute_country_map_data(clicks):
+    """Return map data aggregated by country with approx center lat/lon."""
+    locations = (
+        clicks.exclude(country='').exclude(latitude__isnull=True)
+        .values('country')
+        .annotate(count=Count('id'), lat=Avg('latitude'), lon=Avg('longitude'))
+        .order_by('-count')[:50]
+    )
+    return [{'country': l['country'], 'lat': l['lat'], 'lon': l['lon'], 'count': l['count']} for l in locations]
+
+
+def compute_city_map_data(clicks):
+    """Return map data aggregated by city exact lat/lon."""
+    locations = (
+        clicks.exclude(city='').exclude(latitude__isnull=True)
+        .values('city', 'country', 'latitude', 'longitude')
+        .annotate(count=Count('id'))
+        .order_by('-count')[:100]
+    )
+    return [{'city': l['city'], 'country': l['country'], 'lat': l['latitude'], 'lon': l['longitude'], 'count': l['count']} for l in locations]
+
+
 # ── LEVEL 3b: Site Tracker Analytics ─────────────────────────────────────────
 
 @login_required
 def site_analytics(request, tracker_id):
     tracker = get_object_or_404(SiteTracker, id=tracker_id, project__user=request.user)
+
+    # Date range filtering
+    date_from, date_to = parse_date_range(request)
     clicks = tracker.clicks.all().order_by('-clicked_at')
+    clicks = filter_clicks_by_date(clicks, date_from, date_to)
 
     total = clicks.count()
     unique_pages = clicks.exclude(page_url='').values('page_url').distinct().count()
@@ -353,6 +526,19 @@ def site_analytics(request, tracker_id):
         .order_by('-count')[:10]
     )
 
+    # Chart data (JSON-safe)
+    daily_clicks = json.dumps(compute_daily_clicks(clicks))
+    country_data = json.dumps(compute_country_distribution(clicks))
+    browser_data = json.dumps(compute_browser_breakdown(clicks))
+    device_data = json.dumps(compute_device_breakdown(clicks))
+    city_data = json.dumps(compute_city_distribution(clicks))
+    location_data = json.dumps(compute_location_points(clicks))
+    country_map_json = json.dumps(compute_country_map_data(clicks))
+    city_map_json = json.dumps(compute_city_map_data(clicks))
+
+    # Table sort
+    sort_by = request.GET.get('sort', 'recent')  # 'recent' or 'clicks'
+
     return render(request, 'tracker/site_analytics.html', {
         'tracker': tracker,
         'project': tracker.project,
@@ -363,6 +549,17 @@ def site_analytics(request, tracker_id):
         'ip_groups': ip_groups,
         'top_pages': top_pages,
         'top_elements': top_elements,
+        'daily_clicks': daily_clicks,
+        'country_data': country_data,
+        'browser_data': browser_data,
+        'device_data': device_data,
+        'city_data': city_data,
+        'location_data': location_data,
+        'country_map_json': country_map_json,
+        'city_map_json': city_map_json,
+        'sort_by': sort_by,
+        'date_from': date_from.strftime('%Y-%m-%d') if date_from else '',
+        'date_to': date_to.strftime('%Y-%m-%d') if date_to else '',
     })
 
 
@@ -398,6 +595,168 @@ def site_ip_detail(request, tracker_id):
     })
 
 
+# ── MASTER PROJECT DASHBOARD ─────────────────────────────────────────────────
+
+@login_required
+def master_project_dashboard(request, project_id):
+    project = get_object_or_404(Project, id=project_id, user=request.user)
+    date_from, date_to = parse_date_range(request)
+
+    # Gather all clicks from both tracker types
+    btn_clicks = ClickEvent.objects.filter(tracker__project=project)
+    site_clicks = PageClickEvent.objects.filter(tracker__project=project)
+    btn_clicks = filter_clicks_by_date(btn_clicks, date_from, date_to)
+    site_clicks = filter_clicks_by_date(site_clicks, date_from, date_to)
+
+    total_btn = btn_clicks.count()
+    total_site = site_clicks.count()
+    total_clicks = total_btn + total_site
+
+    # Unique visitors (IPs across both)
+    btn_ips = set(btn_clicks.exclude(ip_address=None).values_list('ip_address', flat=True).distinct())
+    site_ips = set(site_clicks.exclude(ip_address=None).values_list('ip_address', flat=True).distinct())
+    all_ips = btn_ips | site_ips
+    unique_visitors = len(all_ips)
+
+    # Unique countries
+    btn_countries = set(btn_clicks.exclude(country='').values_list('country', flat=True).distinct())
+    site_countries = set(site_clicks.exclude(country='').values_list('country', flat=True).distinct())
+    all_countries = btn_countries | site_countries
+    unique_countries = len(all_countries)
+
+    # Unique pages (site trackers only)
+    unique_pages = site_clicks.exclude(page_url='').values('page_url').distinct().count()
+
+    # Avg clicks per day
+    btn_daily = compute_daily_clicks(btn_clicks)
+    site_daily = compute_daily_clicks(site_clicks)
+    # Merge daily counts
+    daily_map = {}
+    for d in btn_daily:
+        daily_map[d['date']] = daily_map.get(d['date'], 0) + d['count']
+    for d in site_daily:
+        daily_map[d['date']] = daily_map.get(d['date'], 0) + d['count']
+    merged_daily = sorted([{'date': k, 'count': v} for k, v in daily_map.items()], key=lambda x: x['date'])
+    avg_clicks_day = round(sum(d['count'] for d in merged_daily) / max(len(merged_daily), 1), 1)
+
+    # Trackers count
+    total_btn_trackers = project.buttons.count()
+    total_site_trackers = project.site_trackers.count()
+
+    # Chart data: daily trend (separate series for button vs site)
+    daily_btn_json = json.dumps(btn_daily)
+    daily_site_json = json.dumps(site_daily)
+    daily_total_json = json.dumps(merged_daily)
+
+    # Country distribution (merge)
+    btn_country = compute_country_distribution(btn_clicks)
+    site_country = compute_country_distribution(site_clicks)
+    country_map = {}
+    for c in btn_country:
+        country_map[c['country']] = country_map.get(c['country'], 0) + c['count']
+    for c in site_country:
+        country_map[c['country']] = country_map.get(c['country'], 0) + c['count']
+    merged_countries = sorted([{'country': k, 'count': v} for k, v in country_map.items()], key=lambda x: -x['count'])[:10]
+    country_json = json.dumps(merged_countries)
+
+    # Browser / Device breakdown (from site clicks which have user_agent)
+    browser_json = json.dumps(compute_browser_breakdown(site_clicks))
+    device_json = json.dumps(compute_device_breakdown(site_clicks))
+
+    # City distribution (merge btn + site)
+    btn_city = compute_city_distribution(btn_clicks)
+    site_city = compute_city_distribution(site_clicks)
+    city_map = {}
+    for c in btn_city:
+        key = f"{c['city']}|{c['country']}"
+        city_map[key] = {'city': c['city'], 'country': c['country'], 'count': city_map.get(key, {}).get('count', 0) + c['count']}
+    for c in site_city:
+        key = f"{c['city']}|{c['country']}"
+        city_map[key] = {'city': c['city'], 'country': c['country'], 'count': city_map.get(key, {}).get('count', 0) + c['count']}
+    merged_cities = sorted(city_map.values(), key=lambda x: -x['count'])[:15]
+    city_json = json.dumps(merged_cities)
+
+    # Location points for map
+    location_json = json.dumps(compute_location_points(site_clicks))
+
+    # Leaflet Maps JSON data (merge btn + site)
+    btn_country_map = compute_country_map_data(btn_clicks)
+    site_country_map = compute_country_map_data(site_clicks)
+    country_map_dict = {}
+    for c in btn_country_map + site_country_map:
+        key = c['country']
+        if key not in country_map_dict:
+            country_map_dict[key] = {'country': key, 'lat': c['lat'], 'lon': c['lon'], 'count': 0}
+        country_map_dict[key]['count'] += c['count']
+    country_map_json = json.dumps(list(country_map_dict.values()))
+
+    btn_city_map = compute_city_map_data(btn_clicks)
+    site_city_map = compute_city_map_data(site_clicks)
+    city_map_dict = {}
+    for c in btn_city_map + site_city_map:
+        key = f"{c['city']}|{c['country']}"
+        if key not in city_map_dict:
+            city_map_dict[key] = {'city': c['city'], 'country': c['country'], 'lat': c['lat'], 'lon': c['lon'], 'count': 0}
+        city_map_dict[key]['count'] += c['count']
+    city_map_json = json.dumps(list(city_map_dict.values()))
+
+    # Top pages (site only)
+    top_pages = list(
+        site_clicks.exclude(page_url='')
+        .values('page_url')
+        .annotate(count=Count('id'))
+        .order_by('-count')[:10]
+    )
+
+    # Top elements (site only)
+    top_elements = list(
+        site_clicks.exclude(element_text='')
+        .values('element_tag', 'element_text')
+        .annotate(count=Count('id'))
+        .order_by('-count')[:10]
+    )
+
+    # Recent visitors (site clicks, grouped by IP)
+    ip_groups = build_ip_groups(site_clicks)
+
+    # Public share link
+    public_link = None
+    try:
+        from .models import PublicShareLink
+        public_link = project.public_link
+    except Exception:
+        pass
+
+    context = {
+        'project': project,
+        'total_clicks': total_clicks,
+        'total_btn': total_btn,
+        'total_site': total_site,
+        'unique_visitors': unique_visitors,
+        'unique_countries': unique_countries,
+        'unique_pages': unique_pages,
+        'avg_clicks_day': avg_clicks_day,
+        'total_btn_trackers': total_btn_trackers,
+        'total_site_trackers': total_site_trackers,
+        'daily_btn_json': daily_btn_json,
+        'daily_site_json': daily_site_json,
+        'daily_total_json': daily_total_json,
+        'country_json': country_json,
+        'browser_json': browser_json,
+        'device_json': device_json,
+        'city_json': city_json,
+        'location_json': location_json,
+        'country_map_json': country_map_json,
+        'city_map_json': city_map_json,
+        'top_pages': top_pages,
+        'top_elements': top_elements,
+        'ip_groups': ip_groups,
+        'date_from': date_from.strftime('%Y-%m-%d') if date_from else '',
+        'date_to': date_to.strftime('%Y-%m-%d') if date_to else '',
+        'public_link': public_link,
+    }
+    return render(request, 'tracker/master_dashboard.html', context)
+
 @csrf_exempt
 def track_click(request, tracker_id):
     if request.method == 'OPTIONS':
@@ -428,6 +787,8 @@ def track_click(request, tracker_id):
             ip_address=ip_address or None,
             city=location_data.get('city', ''),
             country=location_data.get('country', ''),
+            latitude=location_data.get('lat'),
+            longitude=location_data.get('lon'),
             page_url=page_url,
             referrer=referrer,
             user_agent=user_agent,
@@ -477,6 +838,8 @@ def track_auto_click(request, tracker_id):
             ip_address=ip_address or None,
             city=location_data.get('city', ''),
             country=location_data.get('country', ''),
+            latitude=location_data.get('lat'),
+            longitude=location_data.get('lon'),
             page_url=page_url,
             referrer=referrer,
             element_tag=element_tag,
@@ -536,3 +899,104 @@ def sync_old_locations(request, tracker_type, tracker_id):
     if tracker_type == 'site':
         return redirect('site_analytics', tracker_id=tracker.id)
     return redirect('button_analytics', tracker_id=tracker.id)
+
+
+# ── PUBLIC DASHBOARD (no login required) ─────────────────────────────────────
+
+def public_dashboard(request, token):
+    """Read-only public dashboard for clients — no login required."""
+    from .models import PublicShareLink
+    link = get_object_or_404(PublicShareLink, token=token, is_active=True)
+    project = link.project
+    date_from, date_to = parse_date_range(request)
+
+    btn_clicks = ClickEvent.objects.filter(tracker__project=project)
+    site_clicks = PageClickEvent.objects.filter(tracker__project=project)
+    btn_clicks = filter_clicks_by_date(btn_clicks, date_from, date_to)
+    site_clicks = filter_clicks_by_date(site_clicks, date_from, date_to)
+
+    total_btn = btn_clicks.count()
+    total_site = site_clicks.count()
+    total_clicks = total_btn + total_site
+
+    btn_ips = set(btn_clicks.exclude(ip_address=None).values_list('ip_address', flat=True).distinct())
+    site_ips = set(site_clicks.exclude(ip_address=None).values_list('ip_address', flat=True).distinct())
+    unique_visitors = len(btn_ips | site_ips)
+
+    btn_countries = set(btn_clicks.exclude(country='').values_list('country', flat=True).distinct())
+    site_countries = set(site_clicks.exclude(country='').values_list('country', flat=True).distinct())
+    unique_countries = len(btn_countries | site_countries)
+
+    unique_pages = site_clicks.exclude(page_url='').values('page_url').distinct().count()
+
+    btn_daily = compute_daily_clicks(btn_clicks)
+    site_daily = compute_daily_clicks(site_clicks)
+    daily_map = {}
+    for d in btn_daily:
+        daily_map[d['date']] = daily_map.get(d['date'], 0) + d['count']
+    for d in site_daily:
+        daily_map[d['date']] = daily_map.get(d['date'], 0) + d['count']
+    merged_daily = sorted([{'date': k, 'count': v} for k, v in daily_map.items()], key=lambda x: x['date'])
+    avg_clicks_day = round(sum(d['count'] for d in merged_daily) / max(len(merged_daily), 1), 1)
+
+    country_map = {}
+    for c in compute_country_distribution(btn_clicks):
+        country_map[c['country']] = country_map.get(c['country'], 0) + c['count']
+    for c in compute_country_distribution(site_clicks):
+        country_map[c['country']] = country_map.get(c['country'], 0) + c['count']
+    merged_countries = sorted([{'country': k, 'count': v} for k, v in country_map.items()], key=lambda x: -x['count'])[:10]
+
+    top_pages = list(
+        site_clicks.exclude(page_url='').values('page_url').annotate(count=Count('id')).order_by('-count')[:10]
+    )
+    top_elements = list(
+        site_clicks.exclude(element_text='').values('element_tag', 'element_text').annotate(count=Count('id')).order_by('-count')[:10]
+    )
+    ip_groups = build_ip_groups(site_clicks)
+
+    context = {
+        'project': project,
+        'token': token,
+        'total_clicks': total_clicks,
+        'total_btn': total_btn,
+        'total_site': total_site,
+        'unique_visitors': unique_visitors,
+        'unique_countries': unique_countries,
+        'unique_pages': unique_pages,
+        'avg_clicks_day': avg_clicks_day,
+        'daily_btn_json': json.dumps(btn_daily),
+        'daily_site_json': json.dumps(site_daily),
+        'daily_total_json': json.dumps(merged_daily),
+        'country_json': json.dumps(merged_countries),
+        'browser_json': json.dumps(compute_browser_breakdown(site_clicks)),
+        'device_json': json.dumps(compute_device_breakdown(site_clicks)),
+        'top_pages': top_pages,
+        'top_elements': top_elements,
+        'ip_groups': ip_groups,
+        'date_from': date_from.strftime('%Y-%m-%d') if date_from else '',
+        'date_to': date_to.strftime('%Y-%m-%d') if date_to else '',
+    }
+    return render(request, 'tracker/public_dashboard.html', context)
+
+
+# ── TOGGLE PUBLIC LINK ───────────────────────────────────────────────────────
+
+@login_required
+def toggle_public_link(request, project_id):
+    """Create or toggle the public share link for a project."""
+    project = get_object_or_404(Project, id=project_id, user=request.user)
+    from .models import PublicShareLink
+
+    if request.method == 'POST':
+        link, created = PublicShareLink.objects.get_or_create(project=project)
+        if not created:
+            link.is_active = not link.is_active
+            link.save()
+            if link.is_active:
+                messages.success(request, '🔗 Public link enabled!')
+            else:
+                messages.info(request, '🔒 Public link disabled.')
+        else:
+            messages.success(request, '🔗 Public share link created!')
+
+    return redirect('project_dashboard', project_id=project.id)

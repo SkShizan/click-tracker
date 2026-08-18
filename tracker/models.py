@@ -26,6 +26,8 @@ class ClickEvent(models.Model):
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     city = models.CharField(max_length=100, blank=True)
     country = models.CharField(max_length=100, blank=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
     page_url = models.TextField(blank=True)
     referrer = models.TextField(blank=True)
     user_agent = models.TextField(blank=True)
@@ -55,6 +57,8 @@ class PageClickEvent(models.Model):
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     city = models.CharField(max_length=100, blank=True)
     country = models.CharField(max_length=100, blank=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
     page_url = models.TextField(blank=True)
     referrer = models.TextField(blank=True)
     # which element was clicked
@@ -70,3 +74,13 @@ class PageClickEvent(models.Model):
         indexes = [
             models.Index(fields=['tracker', '-clicked_at']),
         ]
+
+
+class PublicShareLink(models.Model):
+    project = models.OneToOneField(Project, on_delete=models.CASCADE, related_name='public_link')
+    token = models.UUIDField(default=uuid.uuid4, unique=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Public link for {self.project.name}"

@@ -15,6 +15,8 @@ CSRF_TRUSTED_ORIGINS = [
     'https://*.repl.co',
     'https://*.replit.app',
     'http://localhost:8000',
+    'https://*.ngrok-free.app',
+    'https://*.ngrok-free.dev',
 ]
 
 INSTALLED_APPS = [
