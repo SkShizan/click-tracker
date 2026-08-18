@@ -1,0 +1,1065 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} — Master Dashboard — ClickTrack{% endblock %}
+
+{% block breadcrumb %}
+<nav class="breadcrumb">
+    <a href="{% url 'dashboard' %}">Dashboard</a>
+    <span class="sep">/</span>
+    <a href="{% url 'project_dashboard' project.id %}">{{ project.name }}</a>
+    <span class="sep">/</span>
+    <span class="current">Master Dashboard</span>
+</nav>
+{% endblock %}
+
+{% block sidebar_extra %}
+<div class="nav-label">Project</div>
+<a href="{% url 'project_dashboard' project.id %}" class="nav-link">
+    <i class="fa-solid fa-folder-open"></i> {{ project.name|truncatechars:20 }}
+</a>
+<a href="{% url 'master_dashboard' project.id %}" class="nav-link active">
+    <i class="fa-solid fa-chart-pie"></i> Master Dashboard
+</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Dashboard Header -->
+<div class="master-header">
+    <div class="mh-left">
+        <div class="master-logo"><i class="fa-solid fa-chart-pie"></i></div>
+        <div>
+            <h1 class="master-title">{{ project.name }}</h1>
+            <p class="master-sub">Master Analytics Dashboard &middot; All Trackers Combined</p>
+        </div>
+    </div>
+    <div class="mh-right">
+        {% if public_link and public_link.is_active %}
+        <span class="mh-badge">
+            <i class="fa-solid fa-link"></i> Public Link Active
+        </span>
+        {% endif %}
+        <a href="{% url 'project_dashboard' project.id %}" class="btn btn-ghost btn-sm">
+            <i class="fa-solid fa-arrow-left"></i> Project Settings
+        </a>
+    </div>
+</div>
+
+<!-- Date Range Filter -->
+<form method="GET" class="filter-bar mfx-filter">
+    <span class="mfx-filter-label"><i class="fa-solid fa-calendar-days"></i> Report Period</span>
+    <input type="date" name="from" value="{{ date_from }}">
+    <span class="mfx-filter-sep">to</span>
+    <input type="date" name="to" value="{{ date_to }}">
+    <div class="mfx-filter-actions">
+        <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-filter"></i> Apply</button>
+        <a href="{% url 'master_dashboard' project.id %}" class="btn btn-ghost btn-sm"><i class="fa-solid fa-xmark"></i> Clear All Filters</a>
+    </div>
+</form>
+
+<!-- KPI Stats Row -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-icon is-salmon"><i class="fa-solid fa-hand-pointer"></i></div>
+        <div class="kpi-num">{{ total_clicks }}</div>
+        <div class="kpi-label">Total Clicks</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon is-teal"><i class="fa-solid fa-users"></i></div>
+        <div class="kpi-num">{{ unique_visitors }}</div>
+        <div class="kpi-label">Unique Visitors</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon is-teal"><i class="fa-solid fa-globe"></i></div>
+        <div class="kpi-num">{{ unique_countries }}</div>
+        <div class="kpi-label">Countries</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon is-clay"><i class="fa-solid fa-chart-simple"></i></div>
+        <div class="kpi-num">{{ avg_clicks_day }}</div>
+        <div class="kpi-label">Avg Clicks/Day</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon is-salmon"><i class="fa-solid fa-file-lines"></i></div>
+        <div class="kpi-num">{{ unique_pages }}</div>
+        <div class="kpi-label">Unique Pages</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon is-teal"><i class="fa-solid fa-toggle-on"></i></div>
+        <div class="kpi-num">{{ total_btn_trackers|add:total_site_trackers }}</div>
+        <div class="kpi-label">Active Trackers</div>
+    </div>
+</div>
+
+<!-- Chart Row 1: Engagement Trend (Full Width) -->
+<div class="chart-card mfx-card">
+    <div class="mfx-card-head">
+        <div>
+            <div class="chart-title mfx-title">User Engagement</div>
+            <div class="chart-subtitle mfx-sub">Daily clicks: button trackers vs site trackers</div>
+        </div>
+        <div class="mfx-legend">
+            <span class="mfx-legend-item"><span class="mfx-dot" style="background:var(--accent);"></span> Button Clicks</span>
+            <span class="mfx-legend-item"><span class="mfx-dot" style="background:var(--salmon);"></span> Site Clicks</span>
+        </div>
+    </div>
+    <div class="mfx-chart mfx-chart-lg">
+        <canvas id="engagementChart"></canvas>
+    </div>
+</div>
+
+<!-- Chart Row 2: Sessions Bar + Country Doughnut -->
+<div class="chart-grid-2 mfx-grid-2">
+    <div class="chart-card mfx-card">
+        <div class="chart-title mfx-title">Sessions</div>
+        <div class="chart-subtitle mfx-sub">Total daily sessions (all trackers)</div>
+        <div class="mfx-chart">
+            <canvas id="sessionsChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-card mfx-card">
+        <div class="chart-title mfx-title">Demographics</div>
+        <div class="chart-subtitle mfx-sub">Clicks by country</div>
+        <div class="mfx-chart">
+            <canvas id="countryChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Chart Row 3: Country Bar + City Bar (with map toggles) -->
+<div class="chart-grid-2 mfx-grid-2">
+    <div class="chart-card mfx-card">
+        <div class="mfx-card-head">
+            <div>
+                <div class="chart-title mfx-title">Country Traffic</div>
+                <div class="chart-subtitle mfx-sub">Clicks per country</div>
+            </div>
+            <select id="countryViewToggle" onchange="toggleCountryView()" class="mfx-toggle">
+                <option value="chart">Chart View</option>
+                <option value="map">Map View</option>
+            </select>
+        </div>
+        <div id="countryChartContainer" class="mfx-chart mfx-chart-geo">
+            <canvas id="countryBarChart"></canvas>
+        </div>
+        <div id="countryMapContainer" class="mfx-map" style="display:none;"></div>
+    </div>
+    <div class="chart-card mfx-card">
+        <div class="mfx-card-head">
+            <div>
+                <div class="chart-title mfx-title">Top Cities</div>
+                <div class="chart-subtitle mfx-sub">City-level click breakdown</div>
+            </div>
+            <select id="cityViewToggle" onchange="toggleCityView()" class="mfx-toggle">
+                <option value="chart">Chart View</option>
+                <option value="map">Map View</option>
+            </select>
+        </div>
+        <div id="cityChartContainer" class="mfx-chart mfx-chart-geo">
+            <canvas id="cityBarChart"></canvas>
+        </div>
+        <div id="cityMapContainer" class="mfx-map" style="display:none;"></div>
+    </div>
+</div>
+
+<!-- Chart Row 4: Browser + Device + Top Content -->
+<div class="chart-grid-3 mfx-grid-3">
+    <div class="chart-card mfx-card">
+        <div class="chart-title mfx-title">Browser</div>
+        <div class="chart-subtitle mfx-sub">Visitors by browser</div>
+        <div class="mfx-chart mfx-chart-sm">
+            <canvas id="browserChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-card mfx-card">
+        <div class="chart-title mfx-title">Devices</div>
+        <div class="chart-subtitle mfx-sub">Desktop vs Mobile vs Tablet</div>
+        <div class="mfx-chart mfx-chart-sm">
+            <canvas id="deviceChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-card mfx-card">
+        <div class="chart-title mfx-title">Top Content</div>
+        <div class="chart-subtitle mfx-sub">Most visited pages</div>
+        {% if top_pages %}
+        <div class="mfx-chart mfx-chart-sm">
+            <canvas id="topPagesChart"></canvas>
+        </div>
+        {% else %}
+        <p class="mfx-nodata">No page data yet</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Traffic Locations Detail -->
+<div class="chart-card mfx-card mfx-mb">
+    <div class="chart-title mfx-title">Traffic Locations</div>
+    <div class="chart-subtitle mfx-sub">Where your traffic is coming from — city-level breakdown</div>
+    <div id="locationDetails" class="mfx-locwrap"></div>
+</div>
+
+<!-- Data Tables Row -->
+<div class="chart-grid-2 mfx-grid-2 mfx-mb">
+    <!-- Top Pages Table -->
+    <div class="card mfx-card mfx-nomb">
+        <div class="card-header mfx-card-head">
+            <div>
+                <div class="card-title mfx-title">Top Pages</div>
+                <div class="card-subtitle mfx-sub">Most clicked pages across all site trackers</div>
+            </div>
+        </div>
+        {% if top_pages %}
+        <div class="mfx-pagelist">
+            {% for page in top_pages %}
+            {% widthratio page.count total_clicks 100 as pct %}
+            <div class="mfx-pagerow">
+                <div class="mfx-pageline">
+                    <span class="mfx-pageurl" title="{{ page.page_url }}">{{ page.page_url|truncatechars:52 }}</span>
+                    <span class="click-count-badge is-teal">{{ page.count }}</span>
+                </div>
+                <div class="mfx-track"><span style="width:{{ pct }}%;"></span></div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="mfx-nodata">No data yet</p>
+        {% endif %}
+    </div>
+
+    <!-- Top Elements Table -->
+    <div class="card mfx-card mfx-nomb">
+        <div class="card-header mfx-card-head">
+            <div>
+                <div class="card-title mfx-title">Top Elements</div>
+                <div class="card-subtitle mfx-sub">Most clicked buttons &amp; interactive elements</div>
+            </div>
+        </div>
+        {% if top_elements %}
+        <div class="mfx-ellist">
+            {% for el in top_elements %}
+            <div class="mfx-elrow">
+                <div class="mfx-elleft">
+                    <code class="mfx-eltag">{{ el.element_tag|lower }}</code>
+                    <span class="mfx-eltext">{{ el.element_text|truncatechars:38 }}</span>
+                </div>
+                <span class="click-count-badge is-salmon">{{ el.count }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="mfx-nodata">No data yet</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Visitor Sessions Table -->
+<div class="card mfx-card">
+    <div class="card-header mfx-card-head mfx-tablehead">
+        <div>
+            <div class="card-title mfx-title">Visitor Sessions</div>
+            <div class="card-subtitle mfx-sub">
+                {% if ip_groups %}{{ ip_groups|length }} unique visitor{{ ip_groups|length|pluralize }} &middot; {{ total_clicks }} total click{{ total_clicks|pluralize }}{% else %}No visitors recorded yet{% endif %}
+            </div>
+        </div>
+        {% if ip_groups %}
+        <div class="mfx-tabletools">
+            <select id="tableSortSelect" onchange="sortTable()" class="mfx-toggle">
+                <option value="recent" selected>Sort: Most Recent</option>
+                <option value="clicks">Sort: Most Clicks</option>
+                <option value="az">Sort: A-Z (IP)</option>
+            </select>
+            <div class="search-wrap mfx-search">
+                <i class="fa-solid fa-search"></i>
+                <input type="text" class="search-input" id="tableSearch" placeholder="Search visitors..." oninput="filterTable()">
+            </div>
+            <span class="badge badge-salmon mfx-live">
+                <i class="fa-solid fa-circle"></i> Live
+            </span>
+        </div>
+        {% endif %}
+    </div>
+    {% if ip_groups %}
+    <div class="table-wrap mfx-tablewrap">
+        <table id="visitorTable" class="mfx-table">
+            <thead>
+                <tr>
+                    <th>IP Address</th>
+                    <th>Location</th>
+                    <th>Clicks</th>
+                    <th>First Seen</th>
+                    <th>Last Seen</th>
+                    <th>User Agent</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for g in ip_groups %}
+                <tr data-clicks="{{ g.count }}" data-lastseen="{{ g.last_seen|date:'Y-m-d H:i' }}" data-ip="{{ g.ip_address|default:'zzz' }}">
+                    <td>
+                        {% if g.ip_address %}
+                        <code class="ip-code mfx-ip">{{ g.ip_address }}</code>
+                        {% else %}
+                        <span class="mfx-dimtext">Unknown / Local</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if g.city or g.country %}
+                        <div class="mfx-loccell">
+                            <i class="fa-solid fa-location-dot"></i>
+                            <span>{{ g.city|default:"" }}{% if g.city and g.country %}, {% endif %}{{ g.country|default:"" }}</span>
+                        </div>
+                        {% else %}<span class="dim-text mfx-dimtext">—</span>{% endif %}
+                    </td>
+                    <td><span class="click-count-badge is-salmon">{{ g.count }}</span></td>
+                    <td>
+                        <div class="time-cell mfx-time">
+                            <span class="time-date">{{ g.first_seen|date:"M d, Y" }}</span>
+                            <span class="time-hour">{{ g.first_seen|date:"H:i" }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="time-cell mfx-time">
+                            <span class="time-date">{{ g.last_seen|date:"M d, Y" }}</span>
+                            <span class="time-hour">{{ g.last_seen|date:"H:i" }}</span>
+                        </div>
+                    </td>
+                    <td class="mfx-uacell">
+                        <span class="mfx-ua" title="{{ g.user_agent }}">
+                            {{ g.user_agent|truncatechars:45|default:"—" }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state mfx-empty">
+        <div class="empty-icon mfx-emptyico"><i class="fa-solid fa-users"></i></div>
+        <div class="empty-title">No visitor data yet</div>
+        <div class="empty-desc">Add site trackers to your project and embed the tracking script. Visitor data will appear here.</div>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+/* ═══════════════════════════════════════════════════
+   Master Dashboard — restyle v2 · "quiet precision"
+   Flat white cards · hairline borders · micro-labels
+   Same structure & features as before, styling only.
+   ═══════════════════════════════════════════════════ */
+
+/* ── Header: flat card with teal edge, no gradient ── */
+.master-header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #dcebee);
+    border-left: 4px solid var(--accent, #006d77);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 18px;
+}
+.mh-left { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.mh-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.master-logo {
+    width: 48px; height: 48px; border-radius: 11px; flex-shrink: 0;
+    background: rgba(0,109,119,0.09);
+    color: var(--accent, #006d77);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+}
+.master-title {
+    font-size: 21px; font-weight: 800; color: var(--text, #0d2b2e);
+    letter-spacing: -0.35px; line-height: 1.2;
+}
+.master-sub {
+    font-size: 12px; color: var(--text-muted, #4a7c83); margin-top: 3px;
+    text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;
+}
+.mh-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 700;
+    background: rgba(0,109,119,0.08); color: var(--accent, #006d77);
+    border: 1px solid rgba(0,109,119,0.18);
+}
+
+/* ── Filter bar ── */
+.mfx-filter {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #dcebee);
+    border-radius: 12px;
+    padding: 12px 16px; margin-bottom: 18px;
+}
+.mfx-filter-label {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 11px; font-weight: 750; color: var(--text-muted, #4a7c83);
+    text-transform: uppercase; letter-spacing: 0.08em;
+}
+.mfx-filter-label i { color: var(--salmon, #e29578); font-size: 13px; }
+.mfx-filter-sep { font-size: 12px; color: var(--text-dim, #7fa3a8); }
+.mfx-filter input[type="date"] {
+    padding: 7px 10px;
+    border: 1px solid var(--border, #dcebee); border-radius: 8px;
+    font-size: 12.5px; font-family: inherit;
+    color: var(--text, #0d2b2e); background: var(--surface2, #f4f9fb);
+}
+.mfx-filter input[type="date"]:focus-visible { outline: 2px solid var(--accent, #006d77); outline-offset: 1px; }
+.mfx-filter-actions { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+
+/* ── KPI Grid ── */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    margin-bottom: 18px;
+}
+.kpi-card {
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #dcebee);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex; flex-direction: column; gap: 9px;
+    position: relative;
+    transition: border-color 0.18s;
+}
+.kpi-card::after {
+    content: ""; position: absolute; left: 16px; right: 16px; bottom: 0;
+    height: 2px; border-radius: 2px 2px 0 0;
+    background: var(--accent, #006d77); opacity: 0;
+    transition: opacity 0.18s;
+}
+.kpi-card:hover { border-color: rgba(0,109,119,0.4); }
+.kpi-card:hover::after { opacity: 1; }
+.kpi-icon {
+    width: 32px; height: 32px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13.5px;
+}
+.kpi-icon.is-teal { background: rgba(0,109,119,0.09); color: var(--accent, #006d77); }
+.kpi-icon.is-salmon { background: rgba(226,149,120,0.14); color: #c06d47; }
+.kpi-icon.is-clay { background: rgba(255,221,210,0.55); color: #c06040; }
+.kpi-num {
+    font-size: 27px; font-weight: 800; color: var(--text, #0d2b2e);
+    line-height: 1; letter-spacing: -0.5px;
+    font-variant-numeric: tabular-nums;
+}
+.kpi-label {
+    font-size: 10.5px; color: var(--text-muted, #4a7c83);
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
+}
+
+/* ── Cards ── */
+.mfx-card {
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #dcebee);
+    border-radius: 12px;
+    box-shadow: none;
+    padding: 20px 22px;
+    margin-bottom: 18px;
+}
+.mfx-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+.mfx-grid-2 > .mfx-card { margin-bottom: 0; }
+.mfx-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+.mfx-grid-3 > .mfx-card { margin-bottom: 0; }
+.mfx-mb { margin-bottom: 18px; }
+.mfx-nomb { margin-bottom: 0 !important; }
+
+.mfx-card-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.mfx-title {
+    font-size: 14.5px; font-weight: 750; color: var(--text, #0d2b2e);
+    letter-spacing: -0.15px;
+    display: flex; align-items: center; gap: 9px;
+}
+/* salmon tick accent on every section title */
+.mfx-title::before {
+    content: ""; width: 3px; height: 14px; border-radius: 2px;
+    background: var(--salmon, #e29578); flex-shrink: 0;
+}
+.mfx-sub { font-size: 12px; color: var(--text-dim, #7fa3a8); margin-top: 4px; padding-left: 12px; }
+.mfx-title + .mfx-sub { margin-bottom: 12px; }
+
+/* ── Chart containers ── */
+.mfx-chart { position: relative; height: 240px; }
+.mfx-chart-lg { height: 310px; }
+.mfx-chart-sm { height: 200px; }
+.mfx-chart-geo { height: 260px; }
+
+.mfx-legend { display: flex; gap: 15px; align-items: center; font-size: 12px; color: var(--text-muted, #4a7c83); font-weight: 600; }
+.mfx-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.mfx-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+/* ── Toggle selects ── */
+.mfx-toggle {
+    padding: 6px 9px; font-size: 11.5px; font-weight: 600; font-family: inherit;
+    border: 1px solid var(--border, #dcebee); border-radius: 8px;
+    background: var(--surface2, #f4f9fb); color: var(--text, #0d2b2e);
+    cursor: pointer; max-width: 150px;
+}
+.mfx-toggle:hover { border-color: var(--accent, #006d77); }
+.mfx-toggle:focus-visible { outline: 2px solid var(--accent, #006d77); outline-offset: 1px; }
+
+/* ── Maps (bigger, clearly framed) ── */
+.mfx-map {
+    position: relative; height: 300px;
+    border-radius: 10px; overflow: hidden;
+    border: 1px solid var(--border, #dcebee);
+    background: var(--surface2, #f4f9fb);
+    z-index: 1;
+}
+.mfx-map-legend {
+    background: rgba(255,255,255,0.93);
+    border: 1px solid var(--border, #dcebee);
+    border-radius: 8px; padding: 7px 10px;
+    font-size: 10.5px; color: var(--text-muted, #4a7c83);
+    line-height: 1.7; font-family: inherit;
+    box-shadow: 0 1px 4px rgba(13,43,46,0.1);
+}
+.mfx-map-legend b { color: var(--text, #0d2b2e); font-size: 11px; }
+.mfx-map-legend .dot { display: inline-block; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.leaflet-tooltip.mfx-map-tip {
+    background: #0d2b2e; color: #fff; border: 0; border-radius: 7px;
+    padding: 6px 10px; font-size: 12px; font-family: inherit;
+    box-shadow: 0 4px 12px rgba(13,43,46,0.28);
+}
+.leaflet-tooltip.mfx-map-tip::before { border-top-color: #0d2b2e; }
+
+.mfx-nodata { color: var(--text-dim, #7fa3a8); font-size: 13px; text-align: center; padding: 40px 0; }
+
+/* ── Traffic Locations ── */
+.mfx-locwrap { margin-top: 14px; }
+.mfx-locgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 9px; }
+.mfx-locitem {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 11px 14px;
+    background: var(--surface2, #f4f9fb);
+    border: 1px solid var(--border, #dcebee);
+    border-radius: 10px;
+}
+.mfx-locitem .meta { flex: 1; min-width: 0; }
+.mfx-locitem .place { display: flex; align-items: baseline; gap: 6px; }
+.mfx-locitem .place i { color: var(--salmon, #e29578); font-size: 11px; }
+.mfx-locitem .place b { font-size: 12.5px; color: var(--text, #0d2b2e); }
+.mfx-locitem .place small { font-size: 11px; color: var(--text-dim, #7fa3a8); }
+.mfx-locitem .track {
+    height: 5px; border-radius: 3px; overflow: hidden; margin-top: 6px;
+    background: rgba(0,109,119,0.10);
+}
+.mfx-locitem .track span { display: block; height: 100%; background: var(--accent, #006d77); border-radius: 3px; min-width: 4px; }
+
+/* ── Top pages list ── */
+.mfx-pagelist { display: flex; flex-direction: column; gap: 11px; }
+.mfx-pageline { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mfx-pageurl {
+    font-size: 12.5px; color: var(--text, #0d2b2e);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;
+}
+.mfx-track {
+    height: 5px; border-radius: 3px; overflow: hidden; margin-top: 6px;
+    background: rgba(0,109,119,0.08);
+}
+.mfx-track span { display: block; height: 100%; background: var(--accent, #006d77); border-radius: 3px; min-width: 4px; }
+
+/* ── Top elements list ── */
+.mfx-ellist { display: flex; flex-direction: column; gap: 7px; }
+.mfx-elrow {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 9px 12px;
+    background: var(--surface2, #f4f9fb);
+    border: 1px solid var(--border, #dcebee);
+    border-radius: 9px;
+}
+.mfx-elleft { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+.mfx-eltag {
+    font-size: 10px; font-weight: 700; text-transform: lowercase; flex-shrink: 0;
+    color: #b9603c; background: rgba(226,149,120,0.13);
+    border: 1px solid rgba(226,149,120,0.28);
+    padding: 2px 7px; border-radius: 5px;
+    font-family: 'SFMono-Regular', Consolas, 'Courier New', monospace;
+}
+.mfx-eltext { font-size: 12.5px; color: var(--text, #0d2b2e); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Badges ── */
+.click-count-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 32px; padding: 3px 10px;
+    border-radius: 999px; font-size: 12px; font-weight: 750;
+    font-variant-numeric: tabular-nums;
+}
+.click-count-badge.is-teal { background: rgba(0,109,119,0.09); color: var(--accent, #006d77); }
+.click-count-badge.is-salmon { background: rgba(226,149,120,0.16); color: #b9603c; }
+
+/* ── Visitor table ── */
+.mfx-tablehead { align-items: center; }
+.mfx-tabletools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mfx-search { position: relative; }
+.mfx-search i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--text-dim, #7fa3a8); }
+.mfx-search .search-input {
+    padding: 8px 12px 8px 32px; width: 200px; max-width: 100%;
+    border: 1px solid var(--border, #dcebee); border-radius: 8px;
+    font-size: 12.5px; font-family: inherit;
+    background: var(--surface2, #f4f9fb); color: var(--text, #0d2b2e);
+}
+.mfx-search .search-input:focus-visible { outline: 2px solid var(--accent, #006d77); outline-offset: 1px; }
+.mfx-live { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; }
+.mfx-live i { font-size: 7px; animation: mfxBlink 2s infinite; }
+@keyframes mfxBlink { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+.mfx-tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.mfx-table { width: 100%; border-collapse: collapse; min-width: 720px; }
+.mfx-table thead th {
+    text-align: left; padding: 10px 12px;
+    font-size: 10.5px; font-weight: 750; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--text-muted, #4a7c83);
+    background: var(--surface2, #f4f9fb);
+    border-bottom: 1px solid var(--border, #dcebee);
+    white-space: nowrap;
+    position: sticky; top: 0; z-index: 2;
+}
+.mfx-table tbody td {
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--border, #dcebee);
+    font-size: 13px; color: var(--text, #0d2b2e); vertical-align: middle;
+}
+.mfx-table tbody tr:last-child td { border-bottom: 0; }
+.mfx-table tbody tr:hover { background: rgba(0,109,119,0.03); }
+.mfx-ip {
+    font-family: 'SFMono-Regular', Consolas, 'Courier New', monospace;
+    font-size: 12px; font-weight: 650; white-space: nowrap;
+    color: #b9603c; background: var(--surface2, #f4f9fb);
+    border: 1px solid var(--border, #dcebee);
+    border-radius: 6px; padding: 3px 8px;
+}
+.mfx-loccell { display: flex; align-items: center; gap: 6px; font-size: 12.5px; white-space: nowrap; }
+.mfx-loccell i { color: var(--salmon, #e29578); font-size: 11px; }
+.mfx-time { display: flex; flex-direction: column; gap: 1px; white-space: nowrap; }
+.mfx-time .time-date { font-size: 12.5px; color: var(--text, #0d2b2e); font-weight: 550; }
+.mfx-time .time-hour { font-size: 11px; color: var(--text-dim, #7fa3a8); }
+.mfx-uacell { max-width: 210px; }
+.mfx-ua {
+    display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    color: var(--text-muted, #4a7c83); font-size: 12px;
+}
+.mfx-dimtext { color: var(--text-dim, #7fa3a8); font-style: italic; font-size: 12px; }
+
+/* ── Empty state ── */
+.mfx-empty { text-align: center; padding: 44px 20px; }
+.mfx-emptyico {
+    width: 52px; height: 52px; border-radius: 13px; margin: 0 auto 13px;
+    background: rgba(226,149,120,0.14); color: #c06d47;
+    display: flex; align-items: center; justify-content: center; font-size: 19px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1200px) {
+    .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 980px) {
+    .mfx-grid-3 { grid-template-columns: 1fr 1fr; }
+    .mfx-grid-3 > .mfx-card:last-child { grid-column: 1 / -1; }
+}
+@media (max-width: 860px) {
+    .mfx-grid-2 { grid-template-columns: 1fr; }
+    .mfx-filter-actions { margin-left: 0; width: 100%; }
+}
+@media (max-width: 660px) {
+    .master-header { padding: 16px 18px; }
+    .master-title { font-size: 18px; }
+    .kpi-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .kpi-num { font-size: 23px; }
+    .mfx-grid-3 { grid-template-columns: 1fr; }
+    .mfx-grid-3 > .mfx-card:last-child { grid-column: auto; }
+    .mfx-card { padding: 16px; }
+    .mfx-chart-lg { height: 250px; }
+    .mfx-map { height: 260px; }
+    .mfx-tablehead { flex-direction: column; align-items: stretch; }
+    .mfx-tabletools { width: 100%; }
+    .mfx-search { flex: 1; }
+    .mfx-search .search-input { width: 100%; }
+}
+@media (max-width: 380px) {
+    .kpi-grid { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .kpi-card, .kpi-card::after, .mfx-toggle { transition: none; }
+    .mfx-live i { animation: none; }
+}
+</style>
+
+<script>
+// ── Table search ──
+function filterTable() {
+    const q = document.getElementById('tableSearch').value.toLowerCase();
+    document.querySelectorAll('#visitorTable tbody tr').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+
+// ── Chart colors + global defaults ──
+const C = {
+    salmon: '#e29578', accent: '#006d77', teal: '#83c5be', peach: '#ffddd2',
+    palette: ['#e29578','#006d77','#83c5be','#ffddd2','#f5c4b4','#005860','#b8d5dd','#4a7c83','#c06040','#0d2b2e']
+};
+if (typeof Chart !== 'undefined') {
+    Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+    Chart.defaults.font.size = 11;
+    Chart.defaults.color = '#4a7c83';
+    Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(13,43,46,0.94)';
+    Chart.defaults.plugins.tooltip.padding = 10;
+    Chart.defaults.plugins.tooltip.cornerRadius = 8;
+    Chart.defaults.plugins.tooltip.titleFont = { weight: '700', size: 12 };
+    Chart.defaults.plugins.tooltip.boxPadding = 4;
+}
+
+// ── 1. User Engagement (Multi-Series Line) ──
+(function() {
+    const btnData = {{ daily_btn_json|safe }};
+    const siteData = {{ daily_site_json|safe }};
+    if (!btnData.length && !siteData.length) return;
+
+    const allDates = [...new Set([...btnData.map(d=>d.date), ...siteData.map(d=>d.date)])].sort();
+    const btnMap = Object.fromEntries(btnData.map(d=>[d.date,d.count]));
+    const siteMap = Object.fromEntries(siteData.map(d=>[d.date,d.count]));
+
+    const ctx = document.getElementById('engagementChart').getContext('2d');
+    const grad1 = ctx.createLinearGradient(0,0,0,310);
+    grad1.addColorStop(0,'rgba(0,109,119,0.20)'); grad1.addColorStop(1,'rgba(0,109,119,0.01)');
+    const grad2 = ctx.createLinearGradient(0,0,0,310);
+    grad2.addColorStop(0,'rgba(226,149,120,0.25)'); grad2.addColorStop(1,'rgba(226,149,120,0.01)');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: allDates,
+            datasets: [
+                {
+                    label: 'Button Clicks', data: allDates.map(d => btnMap[d]||0),
+                    borderColor: C.accent, backgroundColor: grad1, borderWidth: 2.5,
+                    fill: true, tension: 0.35, pointRadius: 0, pointHoverRadius: 5,
+                    pointHoverBackgroundColor: C.accent, pointHoverBorderColor: '#fff', pointHoverBorderWidth: 2,
+                },
+                {
+                    label: 'Site Clicks', data: allDates.map(d => siteMap[d]||0),
+                    borderColor: C.salmon, backgroundColor: grad2, borderWidth: 2.5,
+                    fill: true, tension: 0.35, pointRadius: 0, pointHoverRadius: 5,
+                    pointHoverBackgroundColor: C.salmon, pointHoverBorderColor: '#fff', pointHoverBorderWidth: 2,
+                }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { maxTicksLimit: 12, maxRotation: 0 } },
+                y: { beginAtZero: true, grid: { color: 'rgba(0,109,119,0.06)' }, ticks: { precision: 0 }, border: { display: false } }
+            },
+            interaction: { intersect: false, mode: 'index' }
+        }
+    });
+})();
+
+// ── 2. Sessions Bar Chart ──
+(function() {
+    const data = {{ daily_total_json|safe }};
+    if (!data.length) return;
+    new Chart(document.getElementById('sessionsChart'), {
+        type: 'bar',
+        data: {
+            labels: data.map(d => d.date),
+            datasets: [{
+                label: 'Sessions',
+                data: data.map(d => d.count),
+                backgroundColor: 'rgba(226,149,120,0.55)',
+                hoverBackgroundColor: C.salmon,
+                borderRadius: 5,
+                borderSkipped: false,
+                maxBarThickness: 26,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { maxTicksLimit: 10, maxRotation: 0, font: { size: 10 } } },
+                y: { beginAtZero: true, grid: { color: 'rgba(0,109,119,0.06)' }, ticks: { precision: 0 }, border: { display: false } }
+            }
+        }
+    });
+})();
+
+// ── 3. Countries Doughnut ──
+(function() {
+    const data = {{ country_json|safe }};
+    if (!data.length) return;
+    new Chart(document.getElementById('countryChart'), {
+        type: 'doughnut',
+        data: {
+            labels: data.map(d => d.country),
+            datasets: [{ data: data.map(d => d.count), backgroundColor: C.palette.slice(0, data.length), borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, cutout: '60%',
+            plugins: { legend: { position: 'right', labels: { color: '#0d2b2e', padding: 10, usePointStyle: true, pointStyleWidth: 9, boxHeight: 7 } } }
+        }
+    });
+})();
+
+// ── 3b. Country Bar Chart ──
+(function() {
+    const data = {{ country_json|safe }};
+    if (!data.length) return;
+    new Chart(document.getElementById('countryBarChart'), {
+        type: 'bar',
+        data: {
+            labels: data.map(d => d.country),
+            datasets: [{
+                data: data.map(d => d.count),
+                backgroundColor: data.map((_, i) => C.palette[i % C.palette.length]),
+                borderRadius: 5, borderSkipped: false, maxBarThickness: 34,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+                y: { beginAtZero: true, grid: { color: 'rgba(0,109,119,0.06)' }, ticks: { precision: 0 }, border: { display: false } }
+            }
+        }
+    });
+})();
+
+// ── 3c. City Horizontal Bar Chart ──
+(function() {
+    const data = {{ city_json|safe }};
+    if (!data.length) return;
+    new Chart(document.getElementById('cityBarChart'), {
+        type: 'bar',
+        data: {
+            labels: data.map(d => d.city + (d.country ? ', ' + d.country : '')),
+            datasets: [{
+                data: data.map(d => d.count),
+                backgroundColor: 'rgba(0,109,119,0.70)',
+                hoverBackgroundColor: C.accent,
+                borderRadius: 5, borderSkipped: false, barThickness: 14,
+            }]
+        },
+        options: {
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { beginAtZero: true, grid: { color: 'rgba(0,109,119,0.06)' }, ticks: { precision: 0, font: { size: 10 } }, border: { display: false } },
+                y: { grid: { display: false }, ticks: { color: '#0d2b2e', font: { size: 10 } } }
+            }
+        }
+    });
+})();
+
+// ── 4. Browser Doughnut ──
+(function() {
+    const data = {{ browser_json|safe }};
+    if (!data.length) return;
+    new Chart(document.getElementById('browserChart'), {
+        type: 'doughnut',
+        data: {
+            labels: data.map(d => d.name),
+            datasets: [{ data: data.map(d => d.count), backgroundColor: C.palette.slice(0, data.length), borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, cutout: '62%',
+            plugins: { legend: { position: 'right', labels: { color: '#0d2b2e', padding: 10, usePointStyle: true, pointStyleWidth: 9, boxHeight: 7 } } }
+        }
+    });
+})();
+
+// ── 5. Devices Doughnut ──
+(function() {
+    const data = {{ device_json|safe }};
+    if (!data.length) return;
+    new Chart(document.getElementById('deviceChart'), {
+        type: 'doughnut',
+        data: {
+            labels: data.map(d => d.name),
+            datasets: [{ data: data.map(d => d.count), backgroundColor: [C.accent, C.salmon, C.teal], borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, cutout: '62%',
+            plugins: { legend: { position: 'right', labels: { color: '#0d2b2e', padding: 10, usePointStyle: true, pointStyleWidth: 9, boxHeight: 7 } } }
+        }
+    });
+})();
+
+// ── 6. Top Pages Horizontal Bar ──
+{% if top_pages %}
+(function() {
+    const pages = [{% for p in top_pages %}{ url: "{{ p.page_url|truncatechars:35|escapejs }}", count: {{ p.count }} },{% endfor %}];
+    if (!pages.length) return;
+    new Chart(document.getElementById('topPagesChart'), {
+        type: 'bar',
+        data: {
+            labels: pages.map(p => p.url),
+            datasets: [{ data: pages.map(p => p.count), backgroundColor: 'rgba(0,109,119,0.7)', hoverBackgroundColor: C.accent, borderRadius: 5, borderSkipped: false, barThickness: 15 }]
+        },
+        options: {
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { beginAtZero: true, grid: { color: 'rgba(0,109,119,0.06)' }, ticks: { precision: 0, font: { size: 10 } }, border: { display: false } },
+                y: { grid: { display: false }, ticks: { color: '#0d2b2e', font: { size: 10 } } }
+            }
+        }
+    });
+})();
+{% endif %}
+
+// ── 7. Traffic Locations Detail ──
+(function() {
+    const locations = {{ location_json|safe }};
+    const container = document.getElementById('locationDetails');
+    if (!locations.length) {
+        container.innerHTML = '<p class="mfx-nodata" style="padding:12px 0;">No location data available</p>';
+        return;
+    }
+    const maxCount = Math.max(...locations.map(l => l.count));
+    let html = '<div class="mfx-locgrid">';
+    locations.forEach(l => {
+        const pct = Math.max(4, Math.round((l.count / maxCount) * 100));
+        html += '<div class="mfx-locitem">' +
+            '<div class="meta">' +
+                '<div class="place"><i class="fa-solid fa-location-dot"></i><b>' + l.city + '</b><small>' + l.country + '</small></div>' +
+                '<div class="track"><span style="width:' + pct + '%;"></span></div>' +
+            '</div>' +
+            '<span class="click-count-badge is-teal">' + l.count + '</span>' +
+        '</div>';
+    });
+    html += '</div>';
+    container.innerHTML = html;
+})();
+
+// ── Table sort ──
+function sortTable() {
+    const select = document.getElementById('tableSortSelect');
+    const tbody = document.querySelector('#visitorTable tbody');
+    if (!tbody) return;
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const mode = select.value;
+    rows.sort((a, b) => {
+        if (mode === 'clicks') return parseInt(b.dataset.clicks) - parseInt(a.dataset.clicks);
+        if (mode === 'az') return (a.dataset.ip || '').localeCompare(b.dataset.ip || '');
+        return (b.dataset.lastseen || '').localeCompare(a.dataset.lastseen || '');
+    });
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+// Auto-sort on load
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('tableSortSelect')) sortTable();
+});
+
+// ── Leaflet Maps Logic (same toggle behaviour, better rendering) ──
+let countryMap = null;
+let cityMap = null;
+const mapDataCountry = {{ country_map_json|safe|default:"[]" }};
+const mapDataCity = {{ city_map_json|safe|default:"[]" }};
+
+function initMap(mapId, dataset, isCountry) {
+    const mapObj = L.map(mapId, { scrollWheelZoom: false, worldCopyJump: true }).setView([20, 0], 2);
+    mapObj.on('focus click', () => mapObj.scrollWheelZoom.enable());
+    mapObj.on('blur mouseout', () => mapObj.scrollWheelZoom.disable());
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 12
+    }).addTo(mapObj);
+
+    const valid = (dataset || []).filter(d => d.lat && d.lon);
+    if (!valid.length) return mapObj;
+    const maxCount = Math.max(...valid.map(d => d.count));
+    const group = L.featureGroup().addTo(mapObj);
+
+    valid.forEach(d => {
+        // sqrt scale = area-proportional bubbles (10x clicks doesn't look 100x bigger)
+        const radius = 6 + Math.sqrt(d.count / maxCount) * 20;
+        const color = isCountry ? '#006d77' : '#e29578';
+        const label = isCountry
+            ? '<b>' + d.country + '</b><br>' + d.count + ' click' + (d.count === 1 ? '' : 's')
+            : '<b>' + d.city + ', ' + d.country + '</b><br>' + d.count + ' click' + (d.count === 1 ? '' : 's');
+
+        L.circleMarker([d.lat, d.lon], {
+            radius: radius,
+            fillColor: color,
+            color: '#fff',
+            weight: 1.5,
+            opacity: 1,
+            fillOpacity: 0.72
+        }).bindTooltip(label, { className: 'mfx-map-tip', direction: 'top', offset: [0, -4] }).addTo(group);
+    });
+
+    // Zoom straight to where the data actually is
+    const b = group.getBounds();
+    if (b.isValid()) mapObj.fitBounds(b, { padding: [30, 30], maxZoom: 5 });
+
+    // Bubble size legend
+    const legend = L.control({ position: 'bottomleft' });
+    legend.onAdd = function() {
+        const div = L.DomUtil.create('div', 'mfx-map-legend');
+        const c = isCountry ? 'rgba(0,109,119,0.72)' : 'rgba(226,149,120,0.85)';
+        div.innerHTML = '<b>Click volume</b><br>' +
+            '<span class="dot" style="width:7px;height:7px;background:' + c + ';"></span>Low' +
+            '<br><span class="dot" style="width:14px;height:14px;background:' + c + ';"></span>High';
+        return div;
+    };
+    legend.addTo(mapObj);
+
+    return mapObj;
+}
+
+window.toggleCountryView = function() {
+    const v = document.getElementById('countryViewToggle').value;
+    const chartC = document.getElementById('countryChartContainer');
+    const mapC = document.getElementById('countryMapContainer');
+    if (v === 'map') {
+        chartC.style.display = 'none';
+        mapC.style.display = 'block';
+        if (!countryMap) {
+            countryMap = initMap('countryMapContainer', mapDataCountry, true);
+        } else {
+            countryMap.invalidateSize();
+        }
+    } else {
+        chartC.style.display = 'block';
+        mapC.style.display = 'none';
+    }
+};
+
+window.toggleCityView = function() {
+    const v = document.getElementById('cityViewToggle').value;
+    const chartC = document.getElementById('cityChartContainer');
+    const mapC = document.getElementById('cityMapContainer');
+    if (v === 'map') {
+        chartC.style.display = 'none';
+        mapC.style.display = 'block';
+        if (!cityMap) {
+            cityMap = initMap('cityMapContainer', mapDataCity, false);
+        } else {
+            cityMap.invalidateSize();
+        }
+    } else {
+        chartC.style.display = 'block';
+        mapC.style.display = 'none';
+    }
+};
+
+// Keep maps crisp when the window resizes
+window.addEventListener('resize', function() {
+    if (countryMap) countryMap.invalidateSize();
+    if (cityMap) cityMap.invalidateSize();
+});
+</script>
+{% endblock %}

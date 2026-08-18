@@ -31,7 +31,13 @@ def get_ip_location(ip_address):
 
     # 2. Localhost won't return geolocation data
     if ip_address in ['127.0.0.1', 'localhost', '::1']:
-        return {"city": "Localhost", "country": "Localhost", "isp": "Local Network"}
+        return {
+            "city": "Localhost", 
+            "country": "Local Developer", 
+            "isp": "Local Network",
+            "lat": 51.505,   # Fake coordinate (London) so local map tests show dots!
+            "lon": -0.09
+        }
 
     try:
         clean_ip = str(ip_address).strip()
