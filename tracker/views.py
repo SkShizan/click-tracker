@@ -953,6 +953,42 @@ def public_dashboard(request, token):
         country_map[c['country']] = country_map.get(c['country'], 0) + c['count']
     merged_countries = sorted([{'country': k, 'count': v} for k, v in country_map.items()], key=lambda x: -x['count'])[:10]
 
+    # City distribution
+    btn_city = compute_city_distribution(btn_clicks)
+    site_city = compute_city_distribution(site_clicks)
+    city_map_dist = {}
+    for c in btn_city:
+        key = f"{c['city']}|{c['country']}"
+        city_map_dist[key] = {'city': c['city'], 'country': c['country'], 'count': city_map_dist.get(key, {}).get('count', 0) + c['count']}
+    for c in site_city:
+        key = f"{c['city']}|{c['country']}"
+        city_map_dist[key] = {'city': c['city'], 'country': c['country'], 'count': city_map_dist.get(key, {}).get('count', 0) + c['count']}
+    merged_cities = sorted(city_map_dist.values(), key=lambda x: -x['count'])[:15]
+
+    # Location points for map detail grid
+    location_json = json.dumps(compute_location_points(site_clicks))
+
+    # Leaflet Maps JSON data
+    btn_country_map = compute_country_map_data(btn_clicks)
+    site_country_map = compute_country_map_data(site_clicks)
+    country_map_dict = {}
+    for c in btn_country_map + site_country_map:
+        key = c['country']
+        if key not in country_map_dict:
+            country_map_dict[key] = {'country': key, 'lat': c['lat'], 'lon': c['lon'], 'count': 0}
+        country_map_dict[key]['count'] += c['count']
+    country_map_json = json.dumps(list(country_map_dict.values()))
+
+    btn_city_map = compute_city_map_data(btn_clicks)
+    site_city_map = compute_city_map_data(site_clicks)
+    city_map_dict = {}
+    for c in btn_city_map + site_city_map:
+        key = f"{c['city']}|{c['country']}"
+        if key not in city_map_dict:
+            city_map_dict[key] = {'city': c['city'], 'country': c['country'], 'lat': c['lat'], 'lon': c['lon'], 'count': 0}
+        city_map_dict[key]['count'] += c['count']
+    city_map_json = json.dumps(list(city_map_dict.values()))
+
     top_pages = list(
         site_clicks.exclude(page_url='').values('page_url').annotate(count=Count('id')).order_by('-count')[:10]
     )
@@ -960,6 +996,9 @@ def public_dashboard(request, token):
         site_clicks.exclude(element_text='').values('element_tag', 'element_text').annotate(count=Count('id')).order_by('-count')[:10]
     )
     ip_groups = build_ip_groups(site_clicks)
+
+    total_btn_trackers = project.buttons.count()
+    total_site_trackers = project.site_trackers.count()
 
     context = {
         'project': project,
@@ -971,12 +1010,18 @@ def public_dashboard(request, token):
         'unique_countries': unique_countries,
         'unique_pages': unique_pages,
         'avg_clicks_day': avg_clicks_day,
+        'total_btn_trackers': total_btn_trackers,
+        'total_site_trackers': total_site_trackers,
         'daily_btn_json': json.dumps(btn_daily),
         'daily_site_json': json.dumps(site_daily),
         'daily_total_json': json.dumps(merged_daily),
         'country_json': json.dumps(merged_countries),
+        'city_json': json.dumps(merged_cities),
         'browser_json': json.dumps(compute_browser_breakdown(site_clicks)),
         'device_json': json.dumps(compute_device_breakdown(site_clicks)),
+        'country_map_json': country_map_json,
+        'city_map_json': city_map_json,
+        'location_json': location_json,
         'top_pages': top_pages,
         'top_elements': top_elements,
         'ip_groups': ip_groups,
